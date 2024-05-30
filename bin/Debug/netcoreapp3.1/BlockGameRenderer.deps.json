@@ -1,0 +1,53 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "BlockGameRenderer/1.0.0": {
+        "dependencies": {
+          "OpenGL": "0.2.1.0",
+          "Tao.FreeGlut": "2.4.0.2"
+        },
+        "runtime": {
+          "BlockGameRenderer.dll": {}
+        }
+      },
+      "OpenGL/0.2.1.0": {
+        "runtime": {
+          "OpenGL.dll": {
+            "assemblyVersion": "0.2.1.0",
+            "fileVersion": "0.2.1.0"
+          }
+        }
+      },
+      "Tao.FreeGlut/2.4.0.2": {
+        "runtime": {
+          "Tao.FreeGlut.dll": {
+            "assemblyVersion": "2.4.0.2",
+            "fileVersion": "2.4.0.2"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BlockGameRenderer/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "OpenGL/0.2.1.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tao.FreeGlut/2.4.0.2": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
