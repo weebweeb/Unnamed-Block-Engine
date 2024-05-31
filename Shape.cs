@@ -7,10 +7,10 @@ namespace Shapes
 {
    public class Shape
     {
-        public static VBO<Vector3> Vertices;
-        public static VBO<int> Elements;
-        public static Vector3 Position;
-        public static Vector3 Size;
+        public VBO<Vector3> Vertices;
+        public VBO<int> Elements;
+        public Vector3 Position;
+        public Vector3 Size;
     }
 
    public class Triangle : Shape

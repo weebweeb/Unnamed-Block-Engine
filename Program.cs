@@ -3,10 +3,12 @@ using Tao.FreeGlut;
 using OpenGL;
 using System.Numerics;
 using Shapes;
+using WorldManager;
+using System.Collections.Generic;
 
 namespace BlockGameRenderer
 {
-    
+
     class Program
     {
         private static int width = 1280, height = 720;
@@ -15,39 +17,26 @@ namespace BlockGameRenderer
         {
             @"#version 130
 
-uniform sampler2D texture;
-
-in vec3 color;
-
-out vec4 fragment;
 
 void main(void)
 {
-    fragment = vec4(color * texture2D(texture, gl_PointCoord).xyz, 1);
+    gl_FragColor = vec4(1,1,1,1);
 }
 ",
         };
-        public static string[] vertexShaders = { 
+        public static string[] vertexShaders = {
 @"
 #version 130
 
 in vec3 vertexPosition;
-in vec3 vertexColor;
-
-out vec3 color;
 
 uniform mat4 projection_matrix;
 uniform mat4 view_matrix;
 uniform mat4 model_matrix;
-uniform bool static_colors;
 
 void main(void)
 {
-    color = (static_colors ? vertexColor : mix(vec3(0, 0, 1), vec3(0.7, 0, 1), clamp(vertexPosition.y / 2, 0, 1)));
-
-    gl_PointSize = clamp(10 + vertexPosition.y * 5, 0, 10);
-
-    gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition.xyz, 1);
+    gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition, 1);
 }
 ", };
 
@@ -59,19 +48,33 @@ void main(void)
 
 
         private static ShaderProgram shaderProgram;
+        private static World Map;
+        private static Triangle ExampleTriangle;
+
+        public static List<GameEntity> VisibleEntities;
+        
         static void Main(string[] args)
         {
             Glut.glutInit();
             Glut.glutInitDisplayMode(Glut.GLUT_DOUBLE | Glut.GLUT_DEPTH);
             Glut.glutInitWindowSize(width, height);
             Glut.glutCreateWindow("Game");
+            Map = new World(new Vector3(-1000,-1000, -1000), new Vector3(1000,1000,1000));
+            ExampleTriangle = new Triangle(new Vector3(0, 0, 0), new Vector3(1,1,1));
+            Map.Insert(ExampleTriangle.Position, ExampleTriangle.Size, ExampleTriangle.Vertices, ExampleTriangle.Elements);
+            VisibleEntities = Map.Entities.Retrieve(new BoundingBox{ 
+               Min = new Vector3(-10,-10,-10),
+               Max = new Vector3(10,10,10)
+            });
+            
+
 
             Glut.glutIdleFunc(onRenderFrame);
             Glut.glutDisplayFunc(onDisplay);
             shaderProgram = new ShaderProgram(vertexShaders[SelectedVertexShader], FragmentShaders[SelectedFragmentShader]);
             shaderProgram.Use(); // init shader program
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance)); // basic world space
-            shaderProgram["view_matrix"].SetValue(Matrix4.LookAt(new Vector3(0, 0, 10), Vector3.Zero, Vector3.UnitY)); //basic camera control 10 units away from origin
+            shaderProgram["view_matrix"].SetValue(Matrix4.LookAt(new Vector3(0, 0, 10), Vector3.Zero, new Vector3(0,1,0))); //basic camera control 10 units away from origin
             Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
         }
 
@@ -85,10 +88,17 @@ void main(void)
             Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             shaderProgram.Use();
+            shaderProgram["model_matrix"].SetValue(Matrix4.CreateTranslation(new Vector3(-1.5f, 0, 0)));
 
             uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
             Gl.EnableVertexAttribArray(vertexPositionIndex);
-
+            foreach (var Ent in VisibleEntities)
+            {
+                Gl.BindBuffer(Ent.Geometry);
+                Gl.VertexAttribPointer(vertexPositionIndex, Ent.Geometry.Size, Ent.Geometry.PointerType, true, 12, IntPtr.Zero);
+                Gl.BindBuffer(Ent.Elements);
+                Gl.DrawElements(BeginMode.Triangles, Ent.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            }
 
             Glut.glutSwapBuffers();
         }
