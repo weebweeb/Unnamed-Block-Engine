@@ -17,10 +17,11 @@ namespace BlockGameRenderer
         {
             @"#version 130
 
+in vec3 color;
 
 void main(void)
 {
-    gl_FragColor = vec4(1,1,1,1);
+    gl_FragColor = vec4(color,1);
 }
 ",
         };
@@ -29,6 +30,9 @@ void main(void)
 #version 130
 
 in vec3 vertexPosition;
+in vec3 vertexColor;
+
+out vec3 color;
 
 uniform mat4 projection_matrix;
 uniform mat4 view_matrix;
@@ -36,6 +40,7 @@ uniform mat4 model_matrix;
 
 void main(void)
 {
+    color = vertexColor;
     gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition, 1);
 }
 ", };
@@ -49,7 +54,8 @@ void main(void)
 
         private static ShaderProgram shaderProgram;
         private static World Map;
-        private static Triangle ExampleTriangle;
+        private static AbstractTriangle ExampleTriangle;
+        private static Square ExampleSquare;
 
         public static List<GameEntity> VisibleEntities;
         
@@ -60,8 +66,10 @@ void main(void)
             Glut.glutInitWindowSize(width, height);
             Glut.glutCreateWindow("Game");
             Map = new World(new Vector3(-1000,-1000, -1000), new Vector3(1000,1000,1000));
-            ExampleTriangle = new Triangle(new Vector3(0, 0, 0), new Vector3(1,1,1));
-            Map.Insert(ExampleTriangle.Position, ExampleTriangle.Size, ExampleTriangle.Vertices, ExampleTriangle.Elements);
+            ExampleTriangle = new AbstractTriangle(new Vector3(-1.5f, 0, 0), new Vector3(1,1,1));
+            ExampleSquare = new Square(new Vector3(1.5f, 0, 0), new Vector3(1, 1, 1));
+            Map.Insert(ExampleTriangle.Position, ExampleTriangle.Size, ExampleTriangle.ConstitutentGeometry);
+            Map.Insert(ExampleSquare.Position, ExampleSquare.Size, ExampleSquare.ConstitutentGeometry);
             VisibleEntities = Map.Entities.Retrieve(new BoundingBox{ 
                Min = new Vector3(-10,-10,-10),
                Max = new Vector3(10,10,10)
@@ -88,16 +96,18 @@ void main(void)
             Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             shaderProgram.Use();
-            shaderProgram["model_matrix"].SetValue(Matrix4.CreateTranslation(new Vector3(-1.5f, 0, 0)));
+            shaderProgram["model_matrix"].SetValue(Matrix4.CreateTranslation(new Vector3(0, 0, 0)));
 
             uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
             Gl.EnableVertexAttribArray(vertexPositionIndex);
             foreach (var Ent in VisibleEntities)
             {
-                Gl.BindBuffer(Ent.Geometry);
-                Gl.VertexAttribPointer(vertexPositionIndex, Ent.Geometry.Size, Ent.Geometry.PointerType, true, 12, IntPtr.Zero);
-                Gl.BindBuffer(Ent.Elements);
-                Gl.DrawElements(BeginMode.Triangles, Ent.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                foreach (var GeometryElements in Ent.Geometry)
+                {
+                    Gl.BindBufferToShaderAttribute(GeometryElements.Vertices, shaderProgram, "vertexPosition");
+                    Gl.BindBuffer(GeometryElements.Elements);
+                    Gl.DrawElements(GeometryElements.Beginmode, GeometryElements.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                }
             }
 
             Glut.glutSwapBuffers();

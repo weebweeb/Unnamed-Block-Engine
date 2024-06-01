@@ -24,13 +24,12 @@ namespace WorldManager
            Entities = new OctreeNode(mapBounds);
         }
 
-        public void Insert(Vector3 ImportPosition, Vector3 ImportSize, VBO<Vector3> ImportGeometry, VBO<int> ImportElements)
+        public void Insert(Vector3 ImportPosition, Vector3 ImportSize, Shape[] ImportRawGeometry)
         {
             Entities.Insert(new GameEntity
                {
                 Position = ImportPosition,
-                Geometry = ImportGeometry,
-                Elements = ImportElements,
+                Geometry = ImportRawGeometry,
                 Bounds = new BoundingBox
                 {
                     Min = new Vector3(ImportPosition.X - (ImportSize.X / 2), ImportPosition.Y - (ImportSize.Y / 2), ImportPosition.Z - (ImportSize.Z / 2)),

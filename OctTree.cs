@@ -12,9 +12,8 @@ namespace WorldManager
 public class GameEntity //Abstract a instance into a generic object
 {
     public Vector3 Position { get; set; }
-    public VBO<int> Elements { get; set; } // Geometry Element data
-    public VBO<Vector3> Geometry { get; set; } //Geometry Vertex data
     public BoundingBox Bounds { get; set; } // Assume BoundingBox is a class defining the entity's bounds.
+    public Shape[] Geometry { get; set; }
 }
 
 // Represents a bounding box with minimum and maximum corners.
