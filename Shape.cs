@@ -14,14 +14,19 @@ namespace Shapes
         public BeginMode Beginmode;
         public Shape[] ConstitutentGeometry;
         public VBO<Vector3> Color;
-        public Matrix4x4 Rotation;
+        public Matrix4 Rotation;
+
+        public static Matrix4 CreateRotationMatrix(Vector3 axis, float angle)
+        {
+            return Matrix4.CreateFromAxisAngle(axis, angle);
+        }
     }
 
    public class Triangle : Shape
     {
 
 
-        public Triangle(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4x4 Angle)
+        public Triangle(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
         {
             // 0 , 1, 0
             // -1, -1, 0
@@ -39,7 +44,7 @@ namespace Shapes
     public class AbstractTriangle : Shape
     {
         private Triangle InstanceTriangle;
-        public AbstractTriangle(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4x4 Angle) {
+        public AbstractTriangle(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle) {
             InstanceTriangle = new Triangle(origin, size, TrigColor, Angle);
             ConstitutentGeometry = new Shape[] {InstanceTriangle};
         }
@@ -49,7 +54,7 @@ namespace Shapes
 
     public class RightTriangle : Shape
     {
-       public RightTriangle(Vector3 origin, Vector3 size, int flip, VBO<Vector3> TrigColor, Matrix4x4 Angle)
+       public RightTriangle(Vector3 origin, Vector3 size, int flip, VBO<Vector3> TrigColor, Matrix4 Angle)
         {
             Elements = new VBO<int>(new int[] { 0, 1, 2, 3 }, BufferTarget.ElementArrayBuffer);
             Vertices = new VBO<Vector3>(new Vector3[] { new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y - (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z) });
@@ -67,7 +72,7 @@ namespace Shapes
         public RightTriangle Side1;
         public RightTriangle Side2;
         
-        public Square(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4x4 Angle)
+        public Square(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
         { //-1 , 1, 0
           //1, 1, 0
           //1, -1, 0
