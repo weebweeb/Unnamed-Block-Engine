@@ -15,6 +15,7 @@ namespace Shapes
         public Shape[] ConstitutentGeometry;
         public VBO<Vector3> Color;
         public Matrix4 Rotation;
+        public Vector3 Orientation = new Vector3(0, 0, 0);
 
         public static Matrix4 CreateRotationMatrix(Vector3 axis, float angle)
         {
@@ -65,6 +66,7 @@ namespace Shapes
             Rotation = Angle;
         }
     }
+
 
 
     public class Square : Shape

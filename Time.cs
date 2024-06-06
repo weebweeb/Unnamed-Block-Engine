@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Collections.Generic;
+using WorldManager;
+using BlockGameRenderer;
 
 namespace Tick
 {
@@ -13,7 +15,7 @@ namespace Tick
         private long previousTicks;
         private Thread timerThread;
         private bool running;
-        private List<GenericFunction> RunTimeFunctions;
+        private List<GenericFunction> RunTimeFunctions = new List<GenericFunction>();
 
         public void addRunTimeFunction(GenericFunction PassedFunction)
         {
@@ -34,11 +36,14 @@ namespace Tick
             stopwatch.Start();
             while (running)
             {
+                
                 foreach (var RunTimeElement in RunTimeFunctions)
                 {
+                    
                     RunTimeElement();
                 }
                 Thread.Sleep(1);
+
             }
             stopwatch.Stop();
         }

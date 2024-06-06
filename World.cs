@@ -3,6 +3,7 @@ using Tao.FreeGlut;
 using OpenGL;
 using System.Numerics;
 using Shapes;
+using BlockGameRenderer;
 
 namespace WorldManager
 {
