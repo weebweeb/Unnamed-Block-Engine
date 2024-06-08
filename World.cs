@@ -4,6 +4,7 @@ using OpenGL;
 using System.Numerics;
 using Shapes;
 using BlockGameRenderer;
+using Blocks;
 
 namespace WorldManager
 {
@@ -25,12 +26,12 @@ namespace WorldManager
            Entities = new OctreeNode(mapBounds);
         }
 
-        public void Insert(Vector3 ImportPosition, Vector3 ImportSize, Shape[] ImportRawGeometry)
+        public void Insert(Vector3 ImportPosition, Vector3 ImportSize, Block Block)
         {
             Entities.Insert(new GameEntity
                {
                 Position = ImportPosition,
-                Geometry = ImportRawGeometry,
+                Block = Block,
                 Bounds = new BoundingBox
                 {
                     Min = new Vector3(ImportPosition.X - (ImportSize.X / 2), ImportPosition.Y - (ImportSize.Y / 2), ImportPosition.Z - (ImportSize.Z / 2)),

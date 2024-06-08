@@ -39,7 +39,7 @@ namespace Tick
                 
                 foreach (var RunTimeElement in RunTimeFunctions)
                 {
-                    
+                    Thread.Sleep(1);
                     RunTimeElement();
                 }
                 Thread.Sleep(1);

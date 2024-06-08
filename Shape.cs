@@ -7,15 +7,15 @@ namespace Shapes
 {
    public class Shape
     {
-        public VBO<Vector3> Vertices;
-        public VBO<int> Elements;
-        public Vector3 Position;
-        public Vector3 Size;
-        public BeginMode Beginmode;
-        public Shape[] ConstitutentGeometry;
-        public VBO<Vector3> Color;
-        public Matrix4 Rotation;
-        public Vector3 Orientation = new Vector3(0, 0, 0);
+        public VBO<Vector3> Vertices { get; set; }
+        public VBO<int> Elements { get; set; }
+        public Vector3 Position { get; set; }
+        public Vector3 Size { get; set; }
+        public BeginMode Beginmode { get; set; }
+        public Shape[] ConstitutentGeometry { get; set; }
+        public VBO<Vector3> Color { get; set; }
+        public Matrix4 Rotation { get; set; }
+        public Vector3 Orientation = new Vector3(0, 0, 0); // whichever way the object is facing when spawned in will be considered 0,0,0 on its orientation. this field should only be really used to get an object's angle quickly and is only changed manually
 
         public static Matrix4 CreateRotationMatrix(Vector3 axis, float angle)
         {
@@ -84,6 +84,59 @@ namespace Shapes
             Side1 = new RightTriangle(origin, size, 1, TrigColor, Angle);
             Side2 = new RightTriangle(origin, size, -1, TrigColor, Angle);
             ConstitutentGeometry = new Shape[] {Side1, Side2};
+        }
+    }
+
+
+    public class Cube : Shape
+    {
+
+        public Cube(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
+        {
+            ConstitutentGeometry = new Shape[] { new Shape { 
+                Size = size,
+                Position = origin,
+                Vertices = new VBO<Vector3>(new Vector3[] 
+                {
+                   new Vector3(origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), // Right face
+                new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Y - size.Y), // Left face
+                new Vector3( origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), // Front face
+                new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), // Back face
+                new Vector3( origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), // Top face
+                new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Y - size.Y), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z)  // Bottom face
+                }),
+                Color = TrigColor,
+                Elements = new VBO<int>(new int[]
+                    { // Right face
+                0, 1, 2, 0, 2, 3,
+                // Left face
+                4, 5, 6, 4, 6, 7,
+                // Front face
+                8, 9, 10, 8, 10, 11,
+                // Back face
+                12, 13, 14, 12, 14, 15,
+                // Top face
+                16, 17, 18, 16, 18, 19,
+                // Bottom face
+                20, 21, 22, 20, 22, 23}, 
+BufferTarget.ElementArrayBuffer),
+                Beginmode = BeginMode.Triangles,
+                Rotation = Angle,
+
+
+                } 
+            
+            };
+
+        }
+    }
+
+
+    public class Pyramid : Shape
+    {
+        public Pyramid(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
+        {
+            ConstitutentGeometry = new Shape[] { };
         }
     }
 

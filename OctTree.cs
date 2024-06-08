@@ -4,6 +4,7 @@ using OpenGL;
 using System.Collections.Generic;
 using System.Numerics;
 using Shapes;
+using Blocks;
 
 namespace WorldManager
 {
@@ -13,7 +14,8 @@ public class GameEntity //Abstract a instance into a generic object
 {
     public Vector3 Position { get; set; }
     public BoundingBox Bounds { get; set; } // Assume BoundingBox is a class defining the entity's bounds.
-    public Shape[] Geometry { get; set; }
+    public Block Block { get; set; }
+
 }
 
 // Represents a bounding box with minimum and maximum corners.

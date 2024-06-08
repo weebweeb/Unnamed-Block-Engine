@@ -16,3 +16,9 @@ C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGa
 C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\obj\Debug\netcoreapp3.1\BlockGameRenderer.dll
 C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\obj\Debug\netcoreapp3.1\BlockGameRenderer.pdb
 C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\obj\Debug\netcoreapp3.1\BlockGameRenderer.genruntimeconfig.cache
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\obj\Debug\netcoreapp3.1\BlockGameRenderer.csproj.ResolveComReference.cache
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\bin\Debug\netcoreapp3.1\System.Drawing.Common.dll
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\bin\Debug\netcoreapp3.1\Microsoft.Win32.SystemEvents.dll
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\bin\Debug\netcoreapp3.1\runtimes\win\lib\netcoreapp3.1\Microsoft.Win32.SystemEvents.dll
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\bin\Debug\netcoreapp3.1\runtimes\unix\lib\netcoreapp3.1\System.Drawing.Common.dll
+C:\Users\Shadow\OneDrive\Documents\Development\GitRepositories\BlockGame\BlockGame\BlockGameRenderer\bin\Debug\netcoreapp3.1\runtimes\win\lib\netcoreapp3.1\System.Drawing.Common.dll

@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "hYRNiumfgHvA0/0ZVKo+PD8nLAyFrCUuL69hlWMIYZ83igUEzk8hW6Ng+9VOo9nxEgDq614QWoJjIMStplmRkQ==",
+  "dgSpecHash": "ftisUV+xH1YvaTi1zMSQZd73JINm+FUkF/Yany2+CxaLy4D0cXDNZ/KpjV4E6eBBt3qQl3ZXrJiA6PjTTn6rlA==",
   "success": true,
   "projectFilePath": "C:\\Users\\Shadow\\OneDrive\\Documents\\Development\\GitRepositories\\BlockGame\\BlockGame\\BlockGameRenderer\\BlockGameRenderer.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\Shadow\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
+    "C:\\Users\\Shadow\\.nuget\\packages\\system.drawing.common\\6.0.0\\system.drawing.common.6.0.0.nupkg.sha512"
+  ],
   "logs": []
 }
