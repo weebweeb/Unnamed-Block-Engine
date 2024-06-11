@@ -40,17 +40,39 @@ namespace Blocks
 
             //string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-            texture = new Texture("grass.png");
+            texture = new Texture("blocktexturetemplate.png");
 
             ID = 0;
 
-            textureUVs = new VBO<Vector2>(new Vector2[] { 
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
-            new Vector2(0,0), new Vector2(1,0), new Vector2(1,1),new Vector2(0,1),
+            textureUVs = new VBO<Vector2>(new Vector2[] {
+                // Side face //3
+                new Vector2(2f / 10f, 1f), new Vector2(3f / 10f, 1f), new Vector2(3f / 10f, 0f), new Vector2(2f / 10f, 0f),
+
+                // Back face //4
+                new Vector2(4f / 10f, 1f), new Vector2(4f / 10f, 0f), new Vector2(3f / 10f, 0f), new Vector2(3f / 10f, 1f),
+
+
+
+                // Side face  //5
+
+                new Vector2(5f / 10f, 1f), new Vector2(5f / 10f, 0f), new Vector2(4f / 10f, 0f), new Vector2(4f / 10f, 1f),
+
+
+
+                // Front face //1
+                new Vector2(0f / 10f, 1f), new Vector2(1f / 10f, 1f), new Vector2(1f / 10f, 0f), new Vector2(0f / 10f, 0f),
+
+                // Bottom face
+
+               new Vector2(6f / 10f, 0f), new Vector2(5f / 10f, 0f), new Vector2(5f / 10f, 1f), new Vector2(6f / 10f, 1f), 
+
+
+
+
+                // Top face
+                new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
+
+
             });
 
             Geometry = new Cube(position, size, ExampleColor3D, Angle);
