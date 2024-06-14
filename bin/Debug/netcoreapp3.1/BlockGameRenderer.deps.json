@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v3.1": {
       "BlockGameRenderer/1.0.0": {
         "dependencies": {
+          "StbImageSharp": "2.27.14",
           "System.Drawing.Common": "6.0.0",
           "OpenGL": "0.2.1.0",
           "Tao.FreeGlut": "2.4.0.2"
@@ -29,6 +30,14 @@
             "assetType": "runtime",
             "assemblyVersion": "6.0.0.0",
             "fileVersion": "6.0.21.52210"
+          }
+        }
+      },
+      "StbImageSharp/2.27.14": {
+        "runtime": {
+          "lib/netstandard2.0/StbImageSharp.dll": {
+            "assemblyVersion": "2.27.14.0",
+            "fileVersion": "2.27.14.0"
           }
         }
       },
@@ -87,6 +96,13 @@
       "sha512": "sha512-hqTM5628jSsQiv+HGpiq3WKBl2c8v1KZfby2J6Pr7pEPlK9waPdgEO6b8A/+/xn/yZ9ulv8HuqK71ONy2tg67A==",
       "path": "microsoft.win32.systemevents/6.0.0",
       "hashPath": "microsoft.win32.systemevents.6.0.0.nupkg.sha512"
+    },
+    "StbImageSharp/2.27.14": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-4C38oL8igoocaywMr4+WDYoXwnVma3gm26heCAVgzWqO91MMPuhgqTlTT7vVpGDMo4/c0h2/zqQuAS6QxJKgmA==",
+      "path": "stbimagesharp/2.27.14",
+      "hashPath": "stbimagesharp.2.27.14.nupkg.sha512"
     },
     "System.Drawing.Common/6.0.0": {
       "type": "package",

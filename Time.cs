@@ -4,6 +4,7 @@ using System.Threading;
 using System.Collections.Generic;
 using WorldManager;
 using BlockGameRenderer;
+using System.Threading.Tasks;
 
 namespace Tick
 {
@@ -31,18 +32,19 @@ namespace Tick
         }
 
         // Update method runs in a separate thread and continuously updates the stopwatch.
-        private void Update()
+        private async void Update()
         {
             stopwatch.Start();
             while (running)
             {
-                
+                await Task.Delay(1);
+
                 foreach (var RunTimeElement in RunTimeFunctions)
                 {
-                    Thread.Sleep(1);
+
                     RunTimeElement();
+                    
                 }
-                Thread.Sleep(1);
 
             }
             stopwatch.Stop();
