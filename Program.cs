@@ -137,6 +137,7 @@ void main(void)
         static void Main(string[] args)
         {
             Glut.glutInit();
+            
             Glut.glutInitDisplayMode(Glut.GLUT_DOUBLE | Glut.GLUT_RGB | Glut.GLUT_DEPTH);
             Glut.glutInitWindowSize(width, height);
             Glut.glutCreateWindow("Game");

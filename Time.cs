@@ -13,9 +13,20 @@ namespace Tick
     {
         
         private Stopwatch stopwatch;
-        private long previousTicks;
+        private double previousTicks;
         private Thread timerThread;
         private bool running;
+        
+        private double currentTime = 0;
+        public double ElapsedThreadTicks = 0;
+        public double TPS = 0;
+        public double minuteCounter = 0;
+        private const double FixedTimestep = 1.0 / 60.0; // 60 FPS
+        private static double previousTime = 0.0;
+        private static double lag = 0.0;
+        private static double lastTickTime = 0.0;
+
+
         private List<GenericFunction> RunTimeFunctions = new List<GenericFunction>();
 
         public void addRunTimeFunction(GenericFunction PassedFunction)
@@ -35,17 +46,40 @@ namespace Tick
         private async void Update()
         {
             stopwatch.Start();
+
+
             while (running)
             {
-                await Task.Delay(1);
+                double currentTime = stopwatch.Elapsed.TotalMilliseconds;
+                double elapsedTime = currentTime - previousTime;
+                previousTime = currentTime;
+                lag += elapsedTime;
+                await Task.Delay((int)(FixedTimestep * 1000));
+               
+                minuteCounter += 1;
 
-                foreach (var RunTimeElement in RunTimeFunctions)
+                if (lag >= FixedTimestep)
                 {
-
-                    RunTimeElement();
                     
-                }
+                    lag -= FixedTimestep;
+                    ElapsedThreadTicks += 1;
 
+
+                    foreach (var RunTimeElement in RunTimeFunctions)
+                    {
+
+                        RunTimeElement();
+
+                    }
+
+                    if (currentTime - lastTickTime >= 1.0)
+                    {
+                        TPS = (ElapsedThreadTicks *1000) / (currentTime - lastTickTime);
+                        ElapsedThreadTicks = 0;
+                        lastTickTime = currentTime;
+                    }
+                }
+                
             }
             stopwatch.Stop();
         }
@@ -66,19 +100,16 @@ namespace Tick
             return stopwatch.Elapsed.TotalSeconds;
         }
 
-        public float GetTicksPerSecond()
+        public double GetTicksPerSecond()
         {
-            stopwatch.Stop();
-            float TPS = (float)stopwatch.ElapsedTicks / System.Diagnostics.Stopwatch.Frequency;
-            stopwatch.Restart();
             return TPS;
         }
 
         // Method to get the number of ticks between the last and current call to this method.
-        public long GetTicksSinceLastCall()
+        public double GetTicksSinceLastCall()
         {
-            long currentTicks = stopwatch.ElapsedTicks;
-            long deltaTicks = currentTicks - previousTicks;
+            double currentTicks = ElapsedThreadTicks;
+            double deltaTicks = currentTicks - previousTicks;
             previousTicks = currentTicks;
             return deltaTicks;
         }

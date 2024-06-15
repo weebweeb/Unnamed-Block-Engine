@@ -42,13 +42,14 @@ namespace BlockGameRenderer
             RenderDistance = Renderdistance;
             world = map;
             UpdateThread = new Time();
-            
 
+            Update();
             UpdateThread.addRunTimeFunction(new GenericFunction(Update));
         }
 
         public GameEntity[] ReturnUpdateList()
         {
+            
             return VisibleEntities.ToArray(); ;
         }
        
