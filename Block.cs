@@ -22,6 +22,8 @@ namespace Blocks
 
         public float Light = 0; // how much light the block gives off, 0 for none
 
+        public Vector3 LightColor = new Vector3(1, 1, 1); // the color of the light the item gives off
+
         public int ID { get; set; }
 
         public float Transparency = 1;
@@ -44,6 +46,10 @@ namespace Blocks
             Hardness = 1;
 
             texture = new Texture("grass.png");
+
+            Light = 20;
+
+            LightColor = new Vector3(1, 1, 1);
 
             ID = 0;
 

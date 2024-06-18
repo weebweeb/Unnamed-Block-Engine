@@ -2,6 +2,15 @@
   "version": 3,
   "targets": {
     ".NETCoreApp,Version=v3.1": {
+      "LowLevelInput.Net/1.36.6": {
+        "type": "package",
+        "compile": {
+          "lib/LowLevelInput.dll": {}
+        },
+        "runtime": {
+          "lib/LowLevelInput.dll": {}
+        }
+      },
       "Microsoft.Win32.SystemEvents/6.0.0": {
         "type": "package",
         "compile": {
@@ -48,6 +57,19 @@
     }
   },
   "libraries": {
+    "LowLevelInput.Net/1.36.6": {
+      "sha512": "CTQFfpAh8V8jKppL0k34Xbr95Q3hfEKvl+bYYBvE0cTh+hiSQj6PhE0qd8jkbOBfA0O7KhDJgYC6qWa7LqBQtw==",
+      "type": "package",
+      "path": "lowlevelinput.net/1.36.6",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/LowLevelInput.dll",
+        "lib/LowLevelInput.xml",
+        "lowlevelinput.net.1.36.6.nupkg.sha512",
+        "lowlevelinput.net.nuspec"
+      ]
+    },
     "Microsoft.Win32.SystemEvents/6.0.0": {
       "sha512": "hqTM5628jSsQiv+HGpiq3WKBl2c8v1KZfby2J6Pr7pEPlK9waPdgEO6b8A/+/xn/yZ9ulv8HuqK71ONy2tg67A==",
       "type": "package",
@@ -119,6 +141,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v3.1": [
+      "LowLevelInput.Net >= 1.36.6",
       "System.Drawing.Common >= 6.0.0"
     ]
   },
@@ -161,6 +184,10 @@
       "netcoreapp3.1": {
         "targetAlias": "netcoreapp3.1",
         "dependencies": {
+          "LowLevelInput.Net": {
+            "target": "Package",
+            "version": "[1.36.6, )"
+          },
           "System.Drawing.Common": {
             "target": "Package",
             "version": "[6.0.0, )"
@@ -184,5 +211,17 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.103\\RuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'LowLevelInput.Net 1.36.6' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8' instead of the project target framework '.NETCoreApp,Version=v3.1'. This package may not be fully compatible with your project.",
+      "libraryId": "LowLevelInput.Net",
+      "targetGraphs": [
+        ".NETCoreApp,Version=v3.1"
+      ]
+    }
+  ]
 }

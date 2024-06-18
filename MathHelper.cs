@@ -9,6 +9,12 @@ namespace MathHelp
     public class QuarternionHelper
     {
         // Function to create a quaternion from three cross product vectors
+
+        public static float DegreesToRadians(float degrees)
+        {
+            return degrees * (MathF.PI / 180.0f);
+        }
+
         public static Quaternion FromCrossProducts(Vector3 u, Vector3 v, Vector3 w)
         {
             u = Vector3.Normalize(u);
@@ -99,14 +105,37 @@ namespace MathHelp
     
     public class Vector3Helper
     {
-        public static Vector3 QuaternionToNormalizedVector3(Quaternion q)
+
+
+        public static Vector3 ConvertAngleToNormalizedVector(float angleInDegrees)
         {
-            
-            q = Quaternion.Normalize(q);
-            Vector3 forward = new Vector3(0, 0, -1);
+            // Convert angle from degrees to radians
+            float angleInRadians = MathF.PI / 180.0f * angleInDegrees;
+
+            // Calculate the x and y components of the vector
+            float x = MathF.Cos(angleInRadians);
+            float y = MathF.Sin(angleInRadians);
+
+            // The z component is 0 since the angle is in the XY plane
+            float z = 0.0f;
+
+            // Create the vector
+            Vector3 vector = new Vector3(x, y, z);
+
+            // Normalize the vector
+            vector = Vector3.Normalize(vector);
+
+            return vector;
+        }
+        public static Vector3 QuaternionToNormalizedVector3(Quaternion q, Vector3 forward)
+        {
+
+            //q = Quaternion.Normalize(q);
+
 
             // Rotate our forward direction by the quaternion
             Vector3 rotatedForward = RotateVectorByQuaternion(forward, q);
+            
             rotatedForward = Vector3.Normalize(rotatedForward);
 
             return rotatedForward;
@@ -119,6 +148,9 @@ namespace MathHelp
             Quaternion qConjugate = Quaternion.Conjugate(q);
 
             Quaternion result = q * qv * qConjugate;
+            
+
+
 
             return new Vector3(result.X, result.Y, result.Z);
         }

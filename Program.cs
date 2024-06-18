@@ -8,7 +8,10 @@ using System.Collections.Generic;
 using Tick;
 using Animations;
 using Blocks;
+using LowLevelInput.Hooks;
+using LowLevelInput.Converters;
 
+ 
 namespace BlockGameRenderer
 {
 
@@ -16,11 +19,50 @@ namespace BlockGameRenderer
 
     class Program
     {
-        private static int width = 1280, height = 720;
+        public static int width = 1280, height = 720;
 
         public static string[] FragmentShaders =
         {
             @"#version 130
+in vec2 uv;
+uniform float opacity;
+uniform int num_lights = 3;
+uniform vec3 lighting_direction[200];
+uniform vec3 lighting_colors[200];
+uniform sampler2D texture;
+in vec3 normals;
+out vec4 fragment;
+
+vec4 tex = texture2D(texture, uv);
+
+
+void main(void)
+{
+    float diffuse = 0;
+    vec3 ambient = vec3(0.3, 0.3, 0.3);
+    vec3 diffusecolor = vec3(0.0);
+     for (int i = 0; i < num_lights; i++) {
+        diffuse = max(dot(normalize(normals), normalize(lighting_direction[i])), 0.0);
+        
+        diffusecolor += diffuse * lighting_colors[i] * vec3(4, 4, 4);
+    }
+    
+
+    vec3 finalColor = tex.rgb * (ambient + diffusecolor);
+
+    fragment = vec4(finalColor, opacity*tex.a);
+    
+}
+",@"#version 130
+
+out vec4 fragment;
+
+void main(void)
+{
+    fragment = vec4(1, 1, 1, 1);
+}
+",
+@"#version 130
 in vec2 uv;
 uniform float opacity;
 uniform int num_lights = 3;
@@ -43,16 +85,7 @@ void main(void)
     fragment = vec4(tex.xyz * lighting, opacity*tex.a);
     
 }
-",@"#version 130
-
-out vec4 fragment;
-
-void main(void)
-{
-    fragment = vec4(1, 1, 1, 1);
-}
-"
-        };
+"};
         public static string[] vertexShaders = {
 @"
 #version 130
@@ -92,25 +125,29 @@ void main(void)
 "};
 
 
-        public static float fov = 0.45f;
-        public static int SelectedVertexShader = 0; //0 - full render, //1 - whiteworld
-        public static int SelectedFragmentShader = 0;
+        public static float fov = 0.7f;
+        public static int SelectedVertexShader = 0; //0 - full render, //1 - whiteworld 
+        public static int SelectedFragmentShader = 2; //0 - full render, //1 - whiteworld //2 b/w shadows
         public static float MaxRenderDistance = 1000f;
         public static float MinRenderDistance = 0.1f;
         public static int numLights = 100; // max number of lights
         public static int Worldsize = 2000;
-        
+        public static bool Fullscreen = false;
 
+        public static Camera camera;
         public static List<Vector3> Lights;
+        public static List<Vector3> Colors;
         private static ShaderProgram shaderProgram;
         private static World Map;
         private static Block ExampleSquare;
-        private static VBO<Vector3> ExampleColor;
-        private static VBO<Vector3> ExampleColor3D;
+        private static Block ExampleSquare2;
         private static Vector3 ExamplePosition;
-        private static Time AnimationThread;
+        private static Time GameTime;
+        private static InputManager inputManager;
         public static UpdateService updateService;
         
+
+
 
 
         private static void ExampleAnimationFunction(Shape Subject)
@@ -133,21 +170,25 @@ void main(void)
   
 
         public static List<GameEntity> VisibleEntities;
-        
+
         static void Main(string[] args)
         {
             Glut.glutInit();
-            
+
             Glut.glutInitDisplayMode(Glut.GLUT_DOUBLE | Glut.GLUT_RGB | Glut.GLUT_DEPTH);
             Glut.glutInitWindowSize(width, height);
             Glut.glutCreateWindow("Game");
-           
-            
+            inputManager = new InputManager();
+
+
+
             ExamplePosition = new Vector3(1.5f, 0, 0);
-            Map = new World(new Vector3(-(Worldsize/2),-(Worldsize / 2), -(Worldsize / 2)), new Vector3((Worldsize / 2), (Worldsize / 2), (Worldsize / 2)));
-            AnimationThread = new Time();  
-            
+            Map = new World(new Vector3(-(Worldsize / 2), -(Worldsize / 2), -(Worldsize / 2)), new Vector3((Worldsize / 2), (Worldsize / 2), (Worldsize / 2)));
+            GameTime = new Time();  // generic thread for generic game jobs
+
             ExampleSquare = new OakLog(ExamplePosition, new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
+            ExampleSquare2 = new Grass(new Vector3(-8f, 0, 0), new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
+
             AnimationObject = new Animation
             {
                 AnimationFunctions = new GenericAnimationFunction[] { new GenericAnimationFunction(ExampleAnimationFunction) },
@@ -155,38 +196,71 @@ void main(void)
                 Subject = ExampleSquare.Geometry
             };
 
+            camera = new Camera(new Vector3(0, 0, 10), 0f, 30f);
+
+
             Map.Insert(ExampleSquare.Geometry.Position, ExampleSquare.Geometry.Size, ExampleSquare);
+            Map.Insert(ExampleSquare2.Geometry.Position, ExampleSquare2.Geometry.Size, ExampleSquare2);
+
             Animator = new AnimationHandler();
             Animator.QueueAnimation(AnimationObject);
             int RoundedRenderDistance = (int)MaxRenderDistance;
             updateService = new UpdateService(Map, RoundedRenderDistance, 5000, new Vector3(0, 0, 0));
-            
-            
+            GameTime.addRunTimeFunction(new GenericFunction(UpdateCamera));
+
 
 
             Gl.DepthFunc(DepthFunction.Less);
             Gl.Enable(EnableCap.DepthTest);
             Gl.Enable(EnableCap.Blend);
+
             Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
             Gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-           
+            Glut.glutReshapeFunc(OnReshape);
+            inputManager.OnKeyboardEvent += Input.OnKeyboardDown;
+            Glut.glutPassiveMotionFunc(camera.Interpolate2D);
+            //Glut.glutKeyboardFunc(Input.OnKeyboardDown);
             Glut.glutIdleFunc(onRenderFrame);
             Glut.glutDisplayFunc(onDisplay);
             Glut.glutCloseFunc(onClose);
             Lights = new List<Vector3>() { };
+            Colors = new List<Vector3>() { };
             shaderProgram = new ShaderProgram(vertexShaders[SelectedVertexShader], FragmentShaders[SelectedFragmentShader]);
             shaderProgram.Use(); 
-            shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance)); 
-            shaderProgram["view_matrix"].SetValue(Matrix4.LookAt(new Vector3(0, 0, 10), Vector3.Zero, new Vector3(0,1,0))); //basic camera control 10 units away from origin
+            shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
+            inputManager.Initialize();
 
-
-            // shaderProgram["model_matrix"].SetValue(Matrix4.CreateTranslation(new Vector3(0, 0, 0)));
             Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
         }
 
-        private static void UpdateLighting(int num, List<Vector3> lightingdirections)
+
+
+        private static void UpdateCamera()
+        {
+
+            // basic movement tied to the main game thread
+            // ill fuckin change it later please god im so tired of working on this camera
+            if (Input.BackwardMomentum) camera.MoveRelative(false, true, false ,false, false, false);
+            if (Input.ForwardMomentum) camera.MoveRelative(true, false, false, false, false, false);
+            if (Input.LeftMomentum) camera.MoveRelative(false, false, true, false, false, false);
+            if (Input.RightMomentum) camera.MoveRelative(false, false, false, true, false ,false);
+            if (Input.UpMomentum) camera.MoveRelative(false, false, false, false, true, false);
+            if (Input.DownMomentum) camera.MoveRelative(false, false, false, false, false, true);
+        }
+
+        
+        private static void OnReshape(int width, int height) {
+            Program.width = width;
+            Program.height = height;
+
+            shaderProgram.Use();
+            shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
+
+        }
+        private static void UpdateLighting(int num, List<Vector3> lightingdirections, List<Vector3> Lightcolor)
         {
             int lightingDirectionsLocation = Gl.GetUniformLocation(shaderProgram.ProgramID, "lighting_direction");
+            int lightingColorLocation = Gl.GetUniformLocation(shaderProgram.ProgramID, "lighting_colors");
             // Convert List<Vector3> to float array
             float[] lightDirArray = new float[lightingdirections.Count * 3];
             for (int i = 0; i < lightingdirections.Count; i++)
@@ -195,9 +269,19 @@ void main(void)
                 lightDirArray[i * 3 + 1] = lightingdirections[i].Y;
                 lightDirArray[i * 3 + 2] = lightingdirections[i].Z;
             }
-         shaderProgram["num_lights"].SetValue(num);
+
+            float[] lightcolorArray = new float[Lightcolor.Count * 3];
+            for (int i = 0; i < lightingdirections.Count; i++)
+            {
+                lightcolorArray[i * 3] = Lightcolor[i].X;
+                lightcolorArray[i * 3 + 1] = Lightcolor[i].Y;
+                lightcolorArray[i * 3 + 2] = Lightcolor[i].Z;
+            }
+            shaderProgram["num_lights"].SetValue(num);
 
          Gl.Uniform3fv(lightingDirectionsLocation, num, lightDirArray);
+         Gl.Uniform3fv(lightingColorLocation, num, lightcolorArray);
+
 
         }
 
@@ -230,6 +314,7 @@ void main(void)
             }
             shaderProgram.DisposeChildren = true;
             shaderProgram.Dispose();
+            inputManager.Dispose();
         }
 
         private static void onDisplay()
@@ -239,13 +324,17 @@ void main(void)
 
         private static void onRenderFrame()
         {
-            Lights.Clear();
+            
             Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            UpdateLighting(Lights.Count, Lights);
+            UpdateLighting(Lights.Count, Lights, Colors);
+            
             shaderProgram.Use();
+            Lights.Clear();
+            Colors.Clear();
             uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
             Gl.EnableVertexAttribArray(vertexPositionIndex);
+            shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
 
 
 
@@ -257,6 +346,7 @@ void main(void)
                 if (Ent.Block.Light > 0)
                 {
                     Lights.Add(Vector3.Normalize(Ent.Position));
+                    Colors.Add(Vector3.Normalize(Ent.Block.LightColor));
                 }
                 
                 foreach (var GeometryElements in Ent.Block.Geometry.ConstitutentGeometry)
@@ -287,6 +377,7 @@ void main(void)
             }
 
             Glut.glutSwapBuffers();
+
         }
     }
 }

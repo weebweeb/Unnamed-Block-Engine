@@ -8,12 +8,21 @@
     ".NETCoreApp,Version=v3.1": {
       "BlockGameRenderer/1.0.0": {
         "dependencies": {
+          "LowLevelInput.Net": "1.36.6",
           "System.Drawing.Common": "6.0.0",
           "OpenGL": "0.2.1.0",
           "Tao.FreeGlut": "2.4.0.2"
         },
         "runtime": {
           "BlockGameRenderer.dll": {}
+        }
+      },
+      "LowLevelInput.Net/1.36.6": {
+        "runtime": {
+          "lib/LowLevelInput.dll": {
+            "assemblyVersion": "1.36.6.0",
+            "fileVersion": "1.36.6.0"
+          }
         }
       },
       "Microsoft.Win32.SystemEvents/6.0.0": {
@@ -80,6 +89,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "LowLevelInput.Net/1.36.6": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-CTQFfpAh8V8jKppL0k34Xbr95Q3hfEKvl+bYYBvE0cTh+hiSQj6PhE0qd8jkbOBfA0O7KhDJgYC6qWa7LqBQtw==",
+      "path": "lowlevelinput.net/1.36.6",
+      "hashPath": "lowlevelinput.net.1.36.6.nupkg.sha512"
     },
     "Microsoft.Win32.SystemEvents/6.0.0": {
       "type": "package",
