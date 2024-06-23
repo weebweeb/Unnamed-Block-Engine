@@ -75,6 +75,7 @@ namespace Shapes
     {
         public RightTriangle Side1;
         public RightTriangle Side2;
+
         
         public Square(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
         { //-1 , 1, 0
@@ -82,7 +83,9 @@ namespace Shapes
           //1, -1, 0
           //-1, -1, 0
 
-
+            Position = origin;
+            Size = size;
+            Rotation = Angle;
             Side1 = new RightTriangle(origin, size, 1, TrigColor, Angle);
             Side2 = new RightTriangle(origin, size, -1, TrigColor, Angle);
             ConstitutentGeometry = new Shape[] {Side1, Side2};
@@ -95,6 +98,11 @@ namespace Shapes
 
         public Cube(Vector3 origin, Vector3 size, VBO<Vector3> TrigColor, Matrix4 Angle)
         {
+
+            Position = origin;
+            Size = size;
+            Rotation = Angle;
+
             ConstitutentGeometry = new Shape[] { new Shape { 
                 Size = size,
                 Position = origin,

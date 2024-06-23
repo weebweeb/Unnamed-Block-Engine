@@ -10,12 +10,14 @@ using Animations;
 using Blocks;
 using LowLevelInput.Hooks;
 using LowLevelInput.Converters;
+using System.IO;
+using System.Runtime.InteropServices;
 
- 
+
 namespace BlockGameRenderer
 {
 
-
+   
 
     class Program
     {
@@ -23,37 +25,47 @@ namespace BlockGameRenderer
 
         public static string[] FragmentShaders =
         {
-            @"#version 130
+            @"#version 430
+
+
+
 in vec2 uv;
 uniform float opacity;
-uniform int num_lights = 3;
-uniform vec3 lighting_direction[200];
-uniform vec3 lighting_colors[200];
 uniform sampler2D texture;
 in vec3 normals;
+
+
+layout(std140, binding = 11) uniform LightData
+{
+    int num_lights;
+    vec4 lighting_directions[100];
+    vec4 lighting_colors[100];
+    vec4 lighting_brightness[100];
+    vec3 ambient;
+};
+
 out vec4 fragment;
+
 
 vec4 tex = texture2D(texture, uv);
 
-
 void main(void)
 {
-    float diffuse = 0;
-    vec3 ambient = vec3(0.3, 0.3, 0.3);
-    vec3 diffusecolor = vec3(0.0);
+    
+
+    vec3 diffusecolor = ambient;
+    
      for (int i = 0; i < num_lights; i++) {
-        diffuse = max(dot(normalize(normals), normalize(lighting_direction[i])), 0.0);
+        float diffuse = max(dot(normalize(lighting_directions[i].xyz), normals), 0.0);
         
-        diffusecolor += diffuse * lighting_colors[i] * vec3(4, 4, 4);
+        diffusecolor += lighting_colors[i].xyz * diffuse  * lighting_brightness[i].x;
     }
     
 
-    vec3 finalColor = tex.rgb * (ambient + diffusecolor);
+    vec3 finalColor = tex.rgb * diffusecolor;
 
-    fragment = vec4(finalColor, opacity*tex.a);
-    
-}
-",@"#version 130
+    fragment = vec4(finalColor, opacity*tex.a); 
+}",@"#version 130
 
 out vec4 fragment;
 
@@ -88,7 +100,7 @@ void main(void)
 "};
         public static string[] vertexShaders = {
 @"
-#version 130
+#version 450
 
 in vec3 vertexPosition;
 in vec2 vertexUV;
@@ -105,7 +117,7 @@ uniform mat4 model_matrix;
 void main(void)
 {
     uv = vertexUV;
-    normals = normalize((model_matrix * vec4(floor(vertexNormals),0)).xyz);
+    normals = normalize((model_matrix * vec4(vertexNormals,0)).xyz);
     
     gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition, 1);
 }
@@ -124,19 +136,21 @@ void main(void)
 }
 "};
 
-
         public static float fov = 0.7f;
         public static int SelectedVertexShader = 0; //0 - full render, //1 - whiteworld 
-        public static int SelectedFragmentShader = 2; //0 - full render, //1 - whiteworld //2 b/w shadows
+        public static int SelectedFragmentShader = 0; //0 - full render, //1 - whiteworld //2 b/w shadows
         public static float MaxRenderDistance = 1000f;
         public static float MinRenderDistance = 0.1f;
         public static int numLights = 100; // max number of lights
         public static int Worldsize = 2000;
         public static bool Fullscreen = false;
+        public static Vector3 ambient_light = new Vector3(0.5f,0.5f,0.5f);
 
         public static Camera camera;
-        public static List<Vector3> Lights;
-        public static List<Vector3> Colors;
+        public static List<Vector4> Lights;
+        public static List<Vector4> Colors;
+        public static List<Vector4> Brightness;
+        private static uint ubo;
         private static ShaderProgram shaderProgram;
         private static World Map;
         private static Block ExampleSquare;
@@ -166,11 +180,84 @@ void main(void)
         }
         public static AnimationHandler Animator;
         public static Animation AnimationObject;
-
-  
-
         public static List<GameEntity> VisibleEntities;
 
+
+        [StructLayout(LayoutKind.Sequential, Pack = 16)]
+        public struct LightData
+        {
+            public int num_lights; // 4 bytes
+            private Vector3 padding; //12 bytes
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100)]
+            public Vector4[] lighting_directions; // Using Vector4 to ensure alignment
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100)]
+            public Vector4[] lighting_colors; // Using Vector4 to ensure alignment
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100)]
+            public Vector4[] lighting_brightness; // Using Vector4 to ensure alignment
+
+            public Vector3 ambient; // 12 bytes
+            private float padding3;  // 4 bytes to align the struct size to a multiple of 16 bytes
+
+        }
+
+        private static void UpdateLightDataUBO()
+        {
+
+            Vector4[] VectorLights = Lights.ToArray();
+
+            LightData data = new LightData
+            {
+                num_lights = VectorLights.Length,
+                lighting_directions = new Vector4[100],
+                lighting_colors = new Vector4[100],
+                lighting_brightness = new Vector4[100],
+                ambient = ambient_light,
+            };
+
+            
+
+            Array.Copy(VectorLights, data.lighting_directions, data.num_lights);
+            Array.Copy(Colors.ToArray(), data.lighting_colors, data.num_lights);
+            Array.Copy(Brightness.ToArray(), data.lighting_brightness, data.num_lights);
+            
+
+
+            Gl.BindBuffer(BufferTarget.UniformBuffer, ubo);
+
+
+            int uboSize = Marshal.SizeOf(typeof(LightData));
+            IntPtr ptr = Marshal.AllocHGlobal(uboSize);
+            Marshal.StructureToPtr(data, ptr, false);
+            Gl.BufferData(BufferTarget.UniformBuffer,(IntPtr)uboSize, ptr, BufferUsageHint.DynamicDraw);
+
+            Marshal.FreeHGlobal(ptr);
+            Gl.BindBuffer(BufferTarget.UniformBuffer, 0);
+
+        }
+
+
+        private static void InitializeUBO(uint uboLocation, string Index)
+        {
+            ubo = Gl.GenBuffer();
+
+            
+            Gl.BindBuffer(BufferTarget.UniformBuffer, ubo);
+            uint blockIndex = Gl.GetUniformBlockIndex(shaderProgram.ProgramID, Index);
+
+            //Gl.UniformBlockBinding(shaderProgram.ProgramID, blockIndex, (uint)11);
+
+            int uboSize = Marshal.SizeOf(typeof(LightData));
+            Gl.BufferData(BufferTarget.UniformBuffer, (IntPtr)uboSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            Gl.BindBufferBase(BufferTarget.UniformBuffer, 11, ubo);
+
+            UpdateLightDataUBO();
+
+            Gl.BindBuffer(BufferTarget.UniformBuffer, 0);
+
+        }
         static void Main(string[] args)
         {
             Glut.glutInit();
@@ -179,7 +266,6 @@ void main(void)
             Glut.glutInitWindowSize(width, height);
             Glut.glutCreateWindow("Game");
             inputManager = new InputManager();
-
 
 
             ExamplePosition = new Vector3(1.5f, 0, 0);
@@ -196,7 +282,7 @@ void main(void)
                 Subject = ExampleSquare.Geometry
             };
 
-            camera = new Camera(new Vector3(0, 0, 10), 0f, 30f);
+            camera = new Camera(new Vector3(0, 0, 10), 0f, 20f);
 
 
             Map.Insert(ExampleSquare.Geometry.Position, ExampleSquare.Geometry.Size, ExampleSquare);
@@ -223,17 +309,22 @@ void main(void)
             Glut.glutIdleFunc(onRenderFrame);
             Glut.glutDisplayFunc(onDisplay);
             Glut.glutCloseFunc(onClose);
-            Lights = new List<Vector3>() { };
-            Colors = new List<Vector3>() { };
+            Lights = new List<Vector4>(100) { };
+            Colors = new List<Vector4>(100) { };
+            Brightness = new List<Vector4>(100) { };
             shaderProgram = new ShaderProgram(vertexShaders[SelectedVertexShader], FragmentShaders[SelectedFragmentShader]);
+            InitializeUBO(shaderProgram.ProgramID, "lightdata");
+
             shaderProgram.Use(); 
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
+
             inputManager.Initialize();
 
             Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
         }
 
 
+        
 
         private static void UpdateCamera()
         {
@@ -255,33 +346,6 @@ void main(void)
 
             shaderProgram.Use();
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
-
-        }
-        private static void UpdateLighting(int num, List<Vector3> lightingdirections, List<Vector3> Lightcolor)
-        {
-            int lightingDirectionsLocation = Gl.GetUniformLocation(shaderProgram.ProgramID, "lighting_direction");
-            int lightingColorLocation = Gl.GetUniformLocation(shaderProgram.ProgramID, "lighting_colors");
-            // Convert List<Vector3> to float array
-            float[] lightDirArray = new float[lightingdirections.Count * 3];
-            for (int i = 0; i < lightingdirections.Count; i++)
-            {
-                lightDirArray[i * 3] = lightingdirections[i].X;
-                lightDirArray[i * 3 + 1] = lightingdirections[i].Y;
-                lightDirArray[i * 3 + 2] = lightingdirections[i].Z;
-            }
-
-            float[] lightcolorArray = new float[Lightcolor.Count * 3];
-            for (int i = 0; i < lightingdirections.Count; i++)
-            {
-                lightcolorArray[i * 3] = Lightcolor[i].X;
-                lightcolorArray[i * 3 + 1] = Lightcolor[i].Y;
-                lightcolorArray[i * 3 + 2] = Lightcolor[i].Z;
-            }
-            shaderProgram["num_lights"].SetValue(num);
-
-         Gl.Uniform3fv(lightingDirectionsLocation, num, lightDirArray);
-         Gl.Uniform3fv(lightingColorLocation, num, lightcolorArray);
-
 
         }
 
@@ -327,11 +391,11 @@ void main(void)
             
             Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            UpdateLighting(Lights.Count, Lights, Colors);
-            
             shaderProgram.Use();
+            UpdateLightDataUBO();
             Lights.Clear();
             Colors.Clear();
+            Brightness.Clear();
             uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
             Gl.EnableVertexAttribArray(vertexPositionIndex);
             shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
@@ -345,8 +409,9 @@ void main(void)
                 Gl.BindTexture(Ent.Block.texture);
                 if (Ent.Block.Light > 0)
                 {
-                    Lights.Add(Vector3.Normalize(Ent.Position));
-                    Colors.Add(Vector3.Normalize(Ent.Block.LightColor));
+                    Lights.Add(new Vector4(Ent.Position.X, Ent.Position.Y, Ent.Position.Z, 0));
+                    Colors.Add(new Vector4(Ent.Block.LightColor.X, Ent.Block.LightColor.Y, Ent.Block.LightColor.Z, 0));
+                    Brightness.Add(new Vector4(Ent.Block.Light, 0 ,0, 0));
                 }
                 
                 foreach (var GeometryElements in Ent.Block.Geometry.ConstitutentGeometry)

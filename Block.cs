@@ -47,9 +47,9 @@ namespace Blocks
 
             texture = new Texture("grass.png");
 
-            Light = 20;
+            Light = 1f;
 
-            LightColor = new Vector3(1, 1, 1);
+            LightColor = new Vector3(0, 1f, 0);
 
             ID = 0;
 
