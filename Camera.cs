@@ -12,9 +12,9 @@ namespace BlockGameRenderer
         private Vector3 position;
         private Vector3 lookAt = new Vector3(1,0,1);
         private Matrix4 viewMatrix; // cached view matrix
+        private Matrix4 simplifiedviewMatrix;
         private bool dirty = true;  // true if the viewMatrix must be recalculated
-        private int downX, downY;
-        private int prevX, prevY;
+        private bool simplifiedDirty = true;
         public bool LockCamera = false;
         public float pitch, yaw = 0;
         public float velocity = 2;
@@ -34,7 +34,22 @@ namespace BlockGameRenderer
                 return viewMatrix;
             }
         }
-    
+
+        public Matrix4 SimplifiedViewMatrix
+        {
+            get
+            {
+                if (simplifiedDirty | dirty == true)
+                {
+                    Vector3 direction = GetDirection();
+                    Vector3 target = position + direction;
+
+                    simplifiedviewMatrix = CreateLookAt(position, target, Vector3.UnitY);
+                }
+                return simplifiedviewMatrix;
+            }
+        }
+
         public Camera(Vector3 position, float pitch, float yaw)
         {
             this.position = position;
@@ -54,6 +69,20 @@ namespace BlockGameRenderer
                 xAxis.Y, yAxis.Y, zAxis.Y, 0,
                 xAxis.Z, yAxis.Z, zAxis.Z, 0,
                 -Vector3.Dot(xAxis, eye), -Vector3.Dot(yAxis, eye), -Vector3.Dot(zAxis, eye), 1 }
+            );
+        }
+
+        private Matrix4 CreateSimplifiedLookAt(Vector3 eye, Vector3 target, Vector3 up)
+        {
+            Vector3 zAxis = Vector3.Normalize(eye - target); // Forward
+            Vector3 xAxis = Vector3.Normalize(Vector3.Cross(up, zAxis)); // Right
+            Vector3 yAxis = Vector3.Cross(zAxis, xAxis); // Up
+
+            return new Matrix4(new float[] {
+                xAxis.X, yAxis.X, zAxis.X, 0,
+                xAxis.Y, yAxis.Y, zAxis.Y, 0,
+                xAxis.Z, yAxis.Z, zAxis.Z, 0,
+                      0,       0,      0, 0 }
             );
         }
 

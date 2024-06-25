@@ -2,6 +2,7 @@
 using Tao.FreeGlut;
 using OpenGL;
 using System.Numerics;
+using System.Drawing;
 using Shapes;
 using WorldManager;
 using System.Collections.Generic;
@@ -12,7 +13,10 @@ using LowLevelInput.Hooks;
 using LowLevelInput.Converters;
 using System.IO;
 using System.Runtime.InteropServices;
-
+using System.Drawing.Imaging;
+using System.Text;
+using System.Threading;
+using Skybox;
 
 namespace BlockGameRenderer
 {
@@ -23,122 +27,12 @@ namespace BlockGameRenderer
     {
         public static int width = 1280, height = 720;
 
-        public static string[] FragmentShaders =
-        {
-            @"#version 430
-
-
-
-in vec2 uv;
-uniform float opacity;
-uniform sampler2D texture;
-in vec3 normals;
-
-
-layout(std140, binding = 11) uniform LightData
-{
-    int num_lights;
-    vec4 lighting_directions[100];
-    vec4 lighting_colors[100];
-    vec4 lighting_brightness[100];
-    vec3 ambient;
-};
-
-out vec4 fragment;
-
-
-vec4 tex = texture2D(texture, uv);
-
-void main(void)
-{
-    
-
-    vec3 diffusecolor = ambient;
-    
-     for (int i = 0; i < num_lights; i++) {
-        float diffuse = max(dot(normalize(lighting_directions[i].xyz), normals), 0.0);
-        
-        diffusecolor += lighting_colors[i].xyz * diffuse  * lighting_brightness[i].x;
-    }
-    
-
-    vec3 finalColor = tex.rgb * diffusecolor;
-
-    fragment = vec4(finalColor, opacity*tex.a); 
-}",@"#version 130
-
-out vec4 fragment;
-
-void main(void)
-{
-    fragment = vec4(1, 1, 1, 1);
-}
-",
-@"#version 130
-in vec2 uv;
-uniform float opacity;
-uniform int num_lights = 3;
-uniform vec3 lighting_direction[200];
-uniform sampler2D texture;
-in vec3 normals;
-out vec4 fragment;
-
-vec4 tex = texture2D(texture, uv);
-
-
-void main(void)
-{
-    float diffuse = 0;
-     for (int i = 0; i < num_lights; i++) {
-        diffuse += max(dot(normals, lighting_direction[i]), 0.0);
-    }
-    float ambient = 0.3;
-    float lighting = max(diffuse, ambient);
-    fragment = vec4(tex.xyz * lighting, opacity*tex.a);
-    
-}
-"};
-        public static string[] vertexShaders = {
-@"
-#version 450
-
-in vec3 vertexPosition;
-in vec2 vertexUV;
-in vec3 vertexNormals;
-
-
-out vec2 uv;
-out vec3 normals;
-
-uniform mat4 projection_matrix;
-uniform mat4 view_matrix;
-uniform mat4 model_matrix;
-
-void main(void)
-{
-    uv = vertexUV;
-    normals = normalize((model_matrix * vec4(vertexNormals,0)).xyz);
-    
-    gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition, 1);
-}
-", @"
-#version 130
-
-in vec3 vertexPosition;
-
-uniform mat4 projection_matrix;
-uniform mat4 view_matrix;
-uniform mat4 model_matrix;
-
-void main(void)
-{
-    gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertexPosition, 1);
-}
-"};
-
         public static float fov = 0.7f;
-        public static int SelectedVertexShader = 0; //0 - full render, //1 - whiteworld 
-        public static int SelectedFragmentShader = 0; //0 - full render, //1 - whiteworld //2 b/w shadows
+        public static string SelectedVertexShader = "Primary.vert";
+        public static string SelectedFragmentShader = "Primary.frag";
+        public static string SkyboxVertexShader = "Skybox.vert";
+        public static string SkyboxFragmentShader = "Skybox.frag";
+
         public static float MaxRenderDistance = 1000f;
         public static float MinRenderDistance = 0.1f;
         public static int numLights = 100; // max number of lights
@@ -151,7 +45,9 @@ void main(void)
         public static List<Vector4> Colors;
         public static List<Vector4> Brightness;
         private static uint ubo;
+        public static uint CubeMapTexture;
         private static ShaderProgram shaderProgram;
+        private static ShaderProgram skyboxShader;
         private static World Map;
         private static Block ExampleSquare;
         private static Block ExampleSquare2;
@@ -159,12 +55,21 @@ void main(void)
         private static Time GameTime;
         private static InputManager inputManager;
         public static UpdateService updateService;
-        
+        public static Skybox.Skybox LocalSkybox;
+        public static AnimationHandler Animator;
+        public static Animation AnimationObject;
+        public static List<GameEntity> VisibleEntities;
+
+        public static String LoadShader(string path)
+        {
+            using (StreamReader reader = new StreamReader(path, Encoding.UTF8))
+            {
+                return reader.ReadToEnd();
+            }
+        }
 
 
-
-
-        private static void ExampleAnimationFunction(Shape Subject)
+            private static void ExampleAnimationFunction(Shape Subject)
         {
             
             foreach(var Polygon in Subject.ConstitutentGeometry)
@@ -178,9 +83,7 @@ void main(void)
                 //Polygon.Position = oldposition;
             }
         }
-        public static AnimationHandler Animator;
-        public static Animation AnimationObject;
-        public static List<GameEntity> VisibleEntities;
+        
 
 
         [StructLayout(LayoutKind.Sequential, Pack = 16)]
@@ -258,8 +161,65 @@ void main(void)
             Gl.BindBuffer(BufferTarget.UniformBuffer, 0);
 
         }
+
+        public static void InitSkybox()
+        {
+            CubeMapTexture = Gl.GenTexture();
+
+            LocalSkybox = new Skybox.Skybox
+            {
+                SkyboxTexturePaths = new string[]{
+                    "BlueSkyDayRight.jpg",
+                    "BlueSkyDayLeft.jpg",
+                    "BlueSkyDayTop.jpg",
+                    "BlueSkyDayBottom.jpg",
+                    "BlueSkyDayFront.jpg",
+                    "BlueSkyDayBack.jpg"
+                }
+
+            };
+
+            Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, TextureParameter.Linear);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, TextureParameter.Linear);
+
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureParameter.ClampToEdge);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureParameter.ClampToEdge);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureParameter.ClampToEdge);
+
+            for (int i = 0; i < LocalSkybox.SkyboxTexturePaths.Length; i++)
+            {
+                Bitmap bitmap = new Bitmap(LocalSkybox.SkyboxTexturePaths[i]);
+                BitmapData data = bitmap.LockBits(
+                    new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                    ImageLockMode.ReadOnly,
+                    System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+
+                if (data != null)
+                {
+
+                    Gl.TexImage2D(
+                        TextureTarget.TextureCubeMapPositiveX + i,
+                        0,
+                        PixelInternalFormat.Rgb,
+                        bitmap.Width,
+                        bitmap.Height,
+                        0,
+                        OpenGL.PixelFormat.Rgb,
+                        PixelType.UnsignedByte,
+                        data.Scan0);
+
+                    bitmap.UnlockBits(data);
+                    bitmap.Dispose();
+                }
+                else { Console.WriteLine("Failed to load skybox texture!"); };
+            }
+        }
+
         static void Main(string[] args)
         {
+            
+
             Glut.glutInit();
 
             Glut.glutInitDisplayMode(Glut.GLUT_DOUBLE | Glut.GLUT_RGB | Glut.GLUT_DEPTH);
@@ -299,6 +259,12 @@ void main(void)
             Gl.DepthFunc(DepthFunction.Less);
             Gl.Enable(EnableCap.DepthTest);
             Gl.Enable(EnableCap.Blend);
+            Gl.Enable(EnableCap.CullFace);
+            Gl.CullFace(CullFaceMode.Front);
+            Gl.Enable(EnableCap.Texture2D);
+            Gl.Enable(EnableCap.TextureCubeMap);
+           
+
 
             Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
             Gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -309,17 +275,18 @@ void main(void)
             Glut.glutIdleFunc(onRenderFrame);
             Glut.glutDisplayFunc(onDisplay);
             Glut.glutCloseFunc(onClose);
+            InitSkybox();
             Lights = new List<Vector4>(100) { };
             Colors = new List<Vector4>(100) { };
             Brightness = new List<Vector4>(100) { };
-            shaderProgram = new ShaderProgram(vertexShaders[SelectedVertexShader], FragmentShaders[SelectedFragmentShader]);
+            shaderProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedFragmentShader));
+            skyboxShader = new ShaderProgram(LoadShader(SkyboxVertexShader), LoadShader(SkyboxVertexShader));
             InitializeUBO(shaderProgram.ProgramID, "lightdata");
-
             shaderProgram.Use(); 
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
-
+            skyboxShader.Use();
+            Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 0);
             inputManager.Initialize();
-
             Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
         }
 
@@ -357,7 +324,9 @@ void main(void)
             Target.Normals.Dispose();
         }
 
+     
 
+       
         private static void onClose()
         {
             VisibleEntities = Map.Entities.Retrieve(new BoundingBox
@@ -388,7 +357,6 @@ void main(void)
 
         private static void onRenderFrame()
         {
-            
             Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             shaderProgram.Use();
@@ -396,9 +364,15 @@ void main(void)
             Lights.Clear();
             Colors.Clear();
             Brightness.Clear();
+
+
+
             uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
             Gl.EnableVertexAttribArray(vertexPositionIndex);
             shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
+
+
+            
 
 
 
@@ -440,6 +414,21 @@ void main(void)
                     
                 }
             }
+            Gl.BindVertexArray(0);
+            Gl.DepthFunc(DepthFunction.Equal);
+            skyboxShader.Use();
+            // redefining some of the matrices so we can render a skybox without issues
+            // quick and dirty
+            skyboxShader["view_matrix"].SetValue(camera.SimplifiedViewMatrix);
+            skyboxShader["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(0.2f, (float)width / height, 0.1f, 100f));
+            Gl.BindBufferToShaderAttribute(LocalSkybox.Vertices, skyboxShader, "aPos");
+            Gl.ActiveTexture(0);
+            Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
+            Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            Gl.BindVertexArray(0);
+
+            Gl.DepthFunc(DepthFunction.Less);
+
 
             Glut.glutSwapBuffers();
 
