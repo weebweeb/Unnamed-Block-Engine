@@ -44,6 +44,10 @@
               "target": "Package",
               "version": "[1.36.6, )"
             },
+            "StbImageSharp": {
+              "target": "Package",
+              "version": "[2.27.14, )"
+            },
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[6.0.0, )"

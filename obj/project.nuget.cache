@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "6BYkpRbl8JBVv2rDKQBvKSSJPCugSbd2O8tZyyzPJOdZBPUWRRjRBzyewoLEr9LdqbNhEUCAvZEt1/KkqFd80Q==",
+  "dgSpecHash": "wqSwVA9EuQGC34iqkLPaABWnvIQIH4919yyHZ+/5m/Q746ixKjTmlnNmf9yEtGpkJx0MtX+Ie6no2nzDbE34hw==",
   "success": true,
   "projectFilePath": "C:\\Users\\Shadow\\OneDrive\\Documents\\Development\\GitRepositories\\BlockGame\\BlockGame\\BlockGameRenderer\\BlockGameRenderer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Shadow\\.nuget\\packages\\lowlevelinput.net\\1.36.6\\lowlevelinput.net.1.36.6.nupkg.sha512",
     "C:\\Users\\Shadow\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
+    "C:\\Users\\Shadow\\.nuget\\packages\\stbimagesharp\\2.27.14\\stbimagesharp.2.27.14.nupkg.sha512",
     "C:\\Users\\Shadow\\.nuget\\packages\\system.drawing.common\\6.0.0\\system.drawing.common.6.0.0.nupkg.sha512"
   ],
   "logs": [

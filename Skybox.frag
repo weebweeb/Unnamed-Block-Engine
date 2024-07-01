@@ -1,12 +1,46 @@
-﻿#version 410
+﻿#version 330 core
+out vec4 FragColor;
 
-out vec3 texCoords;
-in vec4 pos;
-in vec3 newpos;
+in vec3 texCoords;
+
+uniform samplerCube skybox;
+
+
+vec4 sampleCubemap(vec3 dir)
+{
+    return texture(skybox, dir);
+}
 
 void main()
-{
-    gl_Position = vec4(pos.x, pos.y, pos.w, pos.w);
-    // We want to flip the z axis due to the different coordinate systems (left hand vs right hand)
-    texCoords = vec3(newpos.x, newpos.y, -newpos.z);
-}  
+{    
+
+
+    vec4 color = sampleCubemap(texCoords);
+
+    // Sample neighboring texels for better blending at edges
+    vec4 blendColor = color;
+    const float blendFactor = 0.001; // Adjust for stronger/weaker blending
+
+    // X axis blending
+    blendColor += sampleCubemap(texCoords + vec3(blendFactor, 0.0, 0.0));
+    blendColor += sampleCubemap(texCoords - vec3(blendFactor, 0.0, 0.0));
+
+    // Y axis blending
+    blendColor += sampleCubemap(texCoords + vec3(0.0, blendFactor, 0.0));
+    blendColor += sampleCubemap(texCoords - vec3(0.0, blendFactor, 0.0));
+
+    // Z axis blending
+    blendColor += sampleCubemap(texCoords + vec3(0.0, 0.0, blendFactor));
+    blendColor += sampleCubemap(texCoords - vec3(0.0, 0.0, blendFactor));
+
+    // Average the color
+    blendColor /= 7.0; // (1 original + 6 samples)
+
+    // Output the blended color
+    FragColor = blendColor;
+
+  //FragColor = texture(skybox, texCoords);
+
+
+
+}

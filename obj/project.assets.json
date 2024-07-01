@@ -29,6 +29,15 @@
           }
         }
       },
+      "StbImageSharp/2.27.14": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/StbImageSharp.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/StbImageSharp.dll": {}
+        }
+      },
       "System.Drawing.Common/6.0.0": {
         "type": "package",
         "dependencies": {
@@ -99,6 +108,19 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "StbImageSharp/2.27.14": {
+      "sha512": "4C38oL8igoocaywMr4+WDYoXwnVma3gm26heCAVgzWqO91MMPuhgqTlTT7vVpGDMo4/c0h2/zqQuAS6QxJKgmA==",
+      "type": "package",
+      "path": "stbimagesharp/2.27.14",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net471/StbImageSharp.dll",
+        "lib/netstandard2.0/StbImageSharp.dll",
+        "stbimagesharp.2.27.14.nupkg.sha512",
+        "stbimagesharp.nuspec"
+      ]
+    },
     "System.Drawing.Common/6.0.0": {
       "sha512": "NfuoKUiP2nUWwKZN6twGqXioIe1zVD0RIj2t976A+czLHr2nY454RwwXs6JU9Htc6mwqL6Dn/nEL3dpVf2jOhg==",
       "type": "package",
@@ -142,6 +164,7 @@
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v3.1": [
       "LowLevelInput.Net >= 1.36.6",
+      "StbImageSharp >= 2.27.14",
       "System.Drawing.Common >= 6.0.0"
     ]
   },
@@ -187,6 +210,10 @@
           "LowLevelInput.Net": {
             "target": "Package",
             "version": "[1.36.6, )"
+          },
+          "StbImageSharp": {
+            "target": "Package",
+            "version": "[2.27.14, )"
           },
           "System.Drawing.Common": {
             "target": "Package",

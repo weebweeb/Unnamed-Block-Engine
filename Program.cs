@@ -17,6 +17,7 @@ using System.Drawing.Imaging;
 using System.Text;
 using System.Threading;
 using Skybox;
+using StbImageSharp;
 
 namespace BlockGameRenderer
 {
@@ -45,7 +46,7 @@ namespace BlockGameRenderer
         public static List<Vector4> Colors;
         public static List<Vector4> Brightness;
         private static uint ubo;
-        public static uint CubeMapTexture;
+        private static uint CubeMapTexture = 0;
         private static ShaderProgram shaderProgram;
         private static ShaderProgram skyboxShader;
         private static World Map;
@@ -59,6 +60,8 @@ namespace BlockGameRenderer
         public static AnimationHandler Animator;
         public static Animation AnimationObject;
         public static List<GameEntity> VisibleEntities;
+        public static uint skyboxVAO, skyboxVBO, skyboxEBO;
+
 
         public static String LoadShader(string path)
         {
@@ -156,6 +159,7 @@ namespace BlockGameRenderer
             Gl.BufferData(BufferTarget.UniformBuffer, (IntPtr)uboSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
             Gl.BindBufferBase(BufferTarget.UniformBuffer, 11, ubo);
 
+
             UpdateLightDataUBO();
 
             Gl.BindBuffer(BufferTarget.UniformBuffer, 0);
@@ -164,56 +168,91 @@ namespace BlockGameRenderer
 
         public static void InitSkybox()
         {
-            CubeMapTexture = Gl.GenTexture();
+
 
             LocalSkybox = new Skybox.Skybox
             {
                 SkyboxTexturePaths = new string[]{
-                    "BlueSkyDayRight.jpg",
-                    "BlueSkyDayLeft.jpg",
-                    "BlueSkyDayTop.jpg",
-                    "BlueSkyDayBottom.jpg",
-                    "BlueSkyDayFront.jpg",
-                    "BlueSkyDayBack.jpg"
+                    "BlueSkyDayRight.png",
+                    "BlueSkyDayLeft.png",
+                    "BlueSkyDayTop.png",
+                    "BlueSkyDayBottom.png",
+                    "BlueSkyDayFront.png",
+                    "BlueSkyDayBack.png"
                 }
 
             };
 
-            Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
-            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, TextureParameter.Linear);
-            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, TextureParameter.Linear);
+            skyboxVAO = Gl.GenVertexArray();
+            skyboxVBO = Gl.GenBuffer();
+            skyboxEBO = Gl.GenBuffer();
+            Gl.BindVertexArray(skyboxVAO);
+            Gl.BindBuffer(BufferTarget.ArrayBuffer, skyboxVBO);
+            Gl.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * LocalSkybox.Vertices.Length, LocalSkybox.Vertices, BufferUsageHint.StaticDraw);
+            Gl.BindBuffer(BufferTarget.ElementArrayBuffer, skyboxEBO);
+            Gl.BufferData(BufferTarget.ElementArrayBuffer, sizeof(uint) * LocalSkybox.Elements.Length, LocalSkybox.Elements, BufferUsageHint.StaticDraw);
+            Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), IntPtr.Zero);
+            Gl.EnableVertexAttribArray(0);
+            Gl.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            Gl.BindVertexArray(0);
+            Gl.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
 
-            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureParameter.ClampToEdge);
-            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureParameter.ClampToEdge);
-            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureParameter.ClampToEdge);
+
+
+            Gl.ActiveTexture(3);
+
+            CubeMapTexture = Gl.GenTexture();
+
+           
+
+
+            Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
+
+            
 
             for (int i = 0; i < LocalSkybox.SkyboxTexturePaths.Length; i++)
             {
-                Bitmap bitmap = new Bitmap(LocalSkybox.SkyboxTexturePaths[i]);
-                BitmapData data = bitmap.LockBits(
-                    new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                    ImageLockMode.ReadOnly,
-                    System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                byte[] imageData = File.ReadAllBytes(LocalSkybox.SkyboxTexturePaths[i]);
+                ImageResult data = ImageResult.FromMemory(imageData, ColorComponents.RedGreenBlueAlpha);
+
 
                 if (data != null)
                 {
+                    unsafe
+                    {
+                        fixed (byte* dataPtr = data.Data)
+                        {
+                            IntPtr intPtr = new IntPtr(dataPtr);
 
-                    Gl.TexImage2D(
-                        TextureTarget.TextureCubeMapPositiveX + i,
-                        0,
-                        PixelInternalFormat.Rgb,
-                        bitmap.Width,
-                        bitmap.Height,
-                        0,
-                        OpenGL.PixelFormat.Rgb,
-                        PixelType.UnsignedByte,
-                        data.Scan0);
+                            Gl.TexImage2D(
+                            TextureTarget.TextureCubeMapPositiveX + i,
+                            0,
+                            PixelInternalFormat.Rgba,
+                            data.Width,
+                            data.Height,
+                            0,
+                            OpenGL.PixelFormat.Rgba,
+                            PixelType.UnsignedByte,
+                            intPtr);
 
-                    bitmap.UnlockBits(data);
-                    bitmap.Dispose();
+                        }
+                    }
+                   
+
+
                 }
                 else { Console.WriteLine("Failed to load skybox texture!"); };
+
+
             }
+
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, TextureParameter.Linear);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, TextureParameter.Linear);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureParameter.ClampToEdge);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureParameter.ClampToEdge);
+            Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureParameter.ClampToEdge);
+            Gl.BindTexture(TextureTarget.TextureCubeMap, 0);
+
         }
 
         static void Main(string[] args)
@@ -227,7 +266,7 @@ namespace BlockGameRenderer
             Glut.glutCreateWindow("Game");
             inputManager = new InputManager();
 
-
+            
             ExamplePosition = new Vector3(1.5f, 0, 0);
             Map = new World(new Vector3(-(Worldsize / 2), -(Worldsize / 2), -(Worldsize / 2)), new Vector3((Worldsize / 2), (Worldsize / 2), (Worldsize / 2)));
             GameTime = new Time();  // generic thread for generic game jobs
@@ -235,6 +274,7 @@ namespace BlockGameRenderer
             ExampleSquare = new OakLog(ExamplePosition, new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
             ExampleSquare2 = new Grass(new Vector3(-8f, 0, 0), new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
 
+            
             AnimationObject = new Animation
             {
                 AnimationFunctions = new GenericAnimationFunction[] { new GenericAnimationFunction(ExampleAnimationFunction) },
@@ -263,11 +303,16 @@ namespace BlockGameRenderer
             Gl.CullFace(CullFaceMode.Front);
             Gl.Enable(EnableCap.Texture2D);
             Gl.Enable(EnableCap.TextureCubeMap);
-           
+            Gl.FrontFace(FrontFaceDirection.Ccw);
+            Gl.Enable(EnableCap.TextureCubeMapSeamless);
+
+            Gl.Viewport(0, 0, width, height);
+
+
 
 
             Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
-            Gl.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            Gl.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             Glut.glutReshapeFunc(OnReshape);
             inputManager.OnKeyboardEvent += Input.OnKeyboardDown;
             Glut.glutPassiveMotionFunc(camera.Interpolate2D);
@@ -275,17 +320,19 @@ namespace BlockGameRenderer
             Glut.glutIdleFunc(onRenderFrame);
             Glut.glutDisplayFunc(onDisplay);
             Glut.glutCloseFunc(onClose);
-            InitSkybox();
             Lights = new List<Vector4>(100) { };
             Colors = new List<Vector4>(100) { };
             Brightness = new List<Vector4>(100) { };
             shaderProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedFragmentShader));
-            skyboxShader = new ShaderProgram(LoadShader(SkyboxVertexShader), LoadShader(SkyboxVertexShader));
+            skyboxShader = new ShaderProgram(LoadShader(SkyboxVertexShader), LoadShader(SkyboxFragmentShader));
             InitializeUBO(shaderProgram.ProgramID, "lightdata");
             shaderProgram.Use(); 
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
+            
             skyboxShader.Use();
-            Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 0);
+            Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 3);
+            InitSkybox();
+
             inputManager.Initialize();
             Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
         }
@@ -357,7 +404,6 @@ namespace BlockGameRenderer
 
         private static void onRenderFrame()
         {
-            Gl.Viewport(0, 0, width, height);
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             shaderProgram.Use();
             UpdateLightDataUBO();
@@ -414,20 +460,37 @@ namespace BlockGameRenderer
                     
                 }
             }
-            Gl.BindVertexArray(0);
-            Gl.DepthFunc(DepthFunction.Equal);
+
+            
+
             skyboxShader.Use();
             // redefining some of the matrices so we can render a skybox without issues
             // quick and dirty
-            skyboxShader["view_matrix"].SetValue(camera.SimplifiedViewMatrix);
-            skyboxShader["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(0.2f, (float)width / height, 0.1f, 100f));
-            Gl.BindBufferToShaderAttribute(LocalSkybox.Vertices, skyboxShader, "aPos");
-            Gl.ActiveTexture(0);
+            Gl.DepthFunc(DepthFunction.Lequal);
+            Gl.CullFace(CullFaceMode.Back);
+
             Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
+
+            skyboxShader["view_matrix"].SetValue(camera.SimplifiedViewMatrix);
+            skyboxShader["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(0.45f, (float)width / height, 0.1f, 10000f));
+
+
+            Gl.BindVertexArray(skyboxVAO);
+            Gl.ActiveTexture(TextureUnit.Texture3);
+
+
             Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
             Gl.BindVertexArray(0);
 
+
+            //Gl.BindBufferToShaderAttribute(LocalSkybox.Vertices, skyboxShader, "aPos");
+
             Gl.DepthFunc(DepthFunction.Less);
+
+            Gl.CullFace(CullFaceMode.Front);
+
+            Gl.ActiveTexture(0);
+            Gl.BindTexture(TextureTarget.TextureCubeMap, 0);
 
 
             Glut.glutSwapBuffers();
