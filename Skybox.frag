@@ -19,7 +19,7 @@ void main()
 
     // Sample neighboring texels for better blending at edges
     vec4 blendColor = color;
-    const float blendFactor = 0.001; // Adjust for stronger/weaker blending
+    const float blendFactor = 0.3; // Adjust for stronger/weaker blending
 
     // X axis blending
     blendColor += sampleCubemap(texCoords + vec3(blendFactor, 0.0, 0.0));

@@ -1,7 +1,7 @@
 ﻿#version 430
-in vec2 uv;
+in vec3 uv;
 uniform float opacity;
-uniform sampler2D texture;
+uniform sampler2DArray textureArray;
 in vec3 normals;
 
 
@@ -17,7 +17,7 @@ layout(std140, binding = 11) uniform LightData
 out vec4 fragment;
 
 
-vec4 tex = texture2D(texture, uv);
+vec4 tex = texture(textureArray, uv);
 
 void main(void)
 {

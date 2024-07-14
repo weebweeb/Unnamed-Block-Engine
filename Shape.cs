@@ -34,7 +34,7 @@ namespace Shapes
             // 0 , 1, 0
             // -1, -1, 0
             //1, -1, 0
-            Vertices = new VBO<Vector3>(new Vector3[] { new Vector3(origin.X, origin.Y + size.Y, origin.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z), new Vector3(origin.X + size.X, origin.Y - size.Y, origin.Z) });
+            Vertices = new VBO<Vector3>(new Vector3[] { new Vector3(origin.X, origin.Y + size.Y, origin.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z), new Vector3(origin.X + size.X, origin.Y - size.Y, origin.Z) }, BufferTarget.ArrayBuffer);
             Elements = new VBO<int>(new int[] { 0, 1, 2 }, BufferTarget.ElementArrayBuffer);
             Position = origin;
             Size = size;
@@ -60,7 +60,7 @@ namespace Shapes
        public RightTriangle(Vector3 origin, Vector3 size, int flip, VBO<Vector3> TrigColor, Matrix4 Angle)
         {
             Elements = new VBO<int>(new int[] { 0, 1, 2, 3 }, BufferTarget.ElementArrayBuffer);
-            Vertices = new VBO<Vector3>(new Vector3[] { new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y - (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z) });
+            Vertices = new VBO<Vector3>(new Vector3[] { new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y - (size.Y*flip), origin.Z), new Vector3(origin.X - (size.X*flip), origin.Y + (size.Y*flip), origin.Z), new Vector3(origin.X + (size.X*flip), origin.Y + (size.Y*flip), origin.Z) }, BufferTarget.ArrayBuffer);
             Position = origin;
             Size = size;
             Beginmode = BeginMode.TriangleFan;
@@ -106,15 +106,15 @@ namespace Shapes
             ConstitutentGeometry = new Shape[] { new Shape { 
                 Size = size,
                 Position = origin,
-                Vertices = new VBO<Vector3>(new Vector3[] 
+                Vertices = new VBO<Vector3>(new Vector3[]
                 {
-                new Vector3(origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), // Right face
-                new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Y - size.Y), // Left face
-                new Vector3( origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), // Front face
-                new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), // Back face
-                new Vector3( origin.X + size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y,  origin.Z + size.Z), new Vector3(origin.X - size.X,  origin.Y + size.Y, origin.Z - size.Z), new Vector3( origin.X + size.X,  origin.Y + size.Y, origin.Z - size.Z), // Top face
-                new Vector3( origin.X + size.X, origin.Y - size.Y,  origin.Z + size.Z), new Vector3( origin.X + size.X, origin.Y - size.Y, origin.Z - size.Z), new Vector3(origin.X - size.X, origin.Y - size.Y, origin.Y - size.Y), new Vector3(origin.X - size.X, origin.Y - size.Y,  origin.Z + size.Z)  // Bottom face
-                }),
+                    new Vector3(size.X, size.Y, size.Z), new Vector3(size.X, size.Y, -size.Z), new Vector3(size.X, -size.Y, -size.Z), new Vector3(size.X, -size.Y, size.Z), // Right face
+                    new Vector3(-size.X, size.Y, size.Z), new Vector3(-size.X, -size.Y, size.Z), new Vector3(-size.X, -size.Y, -size.Z), new Vector3(-size.X, size.Y, -size.Z), // Left face
+                    new Vector3(size.X, size.Y, size.Z), new Vector3(size.X, -size.Y, size.Z), new Vector3(-size.X, -size.Y, size.Z), new Vector3(-size.X, size.Y, size.Z), // Front face
+                    new Vector3(size.X, size.Y, -size.Z), new Vector3(-size.X, size.Y, -size.Z), new Vector3(-size.X, -size.Y, -size.Z), new Vector3(size.X, -size.Y, -size.Z), // Back face
+                    new Vector3(size.X, size.Y, size.Z), new Vector3(-size.X, size.Y, size.Z), new Vector3(-size.X, size.Y, -size.Z), new Vector3(size.X, size.Y, -size.Z), // Top face
+                    new Vector3(size.X, -size.Y, size.Z), new Vector3(size.X, -size.Y, -size.Z), new Vector3(-size.X, -size.Y, -size.Z), new Vector3(-size.X, -size.Y, size.Z)  // Bottom face
+                }, BufferTarget.ArrayBuffer),
                 Color = TrigColor,
                 Elements = new VBO<int>(new int[]
                     { // Right face
@@ -140,7 +140,7 @@ namespace Shapes
                     new Vector3(0,0,-1),new Vector3(0,0,-1),new Vector3(0,0,-1),new Vector3(0,0,-1), //Back Face
                     new Vector3(0,1,0),new Vector3(0,1,0),new Vector3(0,1,0),new Vector3(0,1,0), // Top Face
                     new Vector3(0,-1,0),new Vector3(0,-1,0),new Vector3(0,-1,0),new Vector3(0,-1,0), //Bottom Face
-                })
+                }, BufferTarget.ArrayBuffer)
 
 
                 } 

@@ -47,6 +47,21 @@ namespace BlockGameRenderer
         public static List<Vector4> Brightness;
         private static uint ubo;
         private static uint CubeMapTexture = 0;
+        private static uint Vao;
+        private static uint BlockTextureIndex;
+        private static List<Matrix4> ObjectMatrices;
+        private static List<Vector4> ActiveBlockTextures;
+        private static uint MatriceUBO;
+        private static string[] BlockTexturePaths =
+        {
+            "grass.png",
+            "stone.png",
+            "water.png",
+            "dirt.png",
+            "oakleaves.png",
+            "oaklog.png",
+        };
+
         private static ShaderProgram shaderProgram;
         private static ShaderProgram skyboxShader;
         private static World Map;
@@ -61,6 +76,7 @@ namespace BlockGameRenderer
         public static Animation AnimationObject;
         public static List<GameEntity> VisibleEntities;
         public static uint skyboxVAO, skyboxVBO, skyboxEBO;
+        public static int InstanceCount = 0;
 
 
         public static String LoadShader(string path)
@@ -105,8 +121,18 @@ namespace BlockGameRenderer
             public Vector4[] lighting_brightness; // Using Vector4 to ensure alignment
 
             public Vector3 ambient; // 12 bytes
-            private float padding3;  // 4 bytes to align the struct size to a multiple of 16 bytes
+            private float padding3;  // 4 bytes to align the struct size
 
+        }
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MatricesBlock
+        {
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100000)]
+            public Matrix4[] Matrices;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100000)]
+            public Vector4[] TextureIDs;
         }
 
         private static void UpdateLightDataUBO()
@@ -144,25 +170,68 @@ namespace BlockGameRenderer
 
         }
 
-
-        private static void InitializeUBO(uint uboLocation, string Index)
+        private static void UpdateMatrixDataUBO()
         {
-            ubo = Gl.GenBuffer();
 
-            
-            Gl.BindBuffer(BufferTarget.UniformBuffer, ubo);
-            uint blockIndex = Gl.GetUniformBlockIndex(shaderProgram.ProgramID, Index);
+            Matrix4[] MatriceArray = ObjectMatrices.ToArray();
+            Vector4[] TextureIndexArray = ActiveBlockTextures.ToArray();
 
-            //Gl.UniformBlockBinding(shaderProgram.ProgramID, blockIndex, (uint)11);
+            MatricesBlock MatriceStructData = new MatricesBlock
+            {
+                Matrices = new Matrix4[100000],
+                TextureIDs = new Vector4[100000]
+            };
 
-            int uboSize = Marshal.SizeOf(typeof(LightData));
-            Gl.BufferData(BufferTarget.UniformBuffer, (IntPtr)uboSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
-            Gl.BindBufferBase(BufferTarget.UniformBuffer, 11, ubo);
+            Array.Copy(MatriceArray, MatriceStructData.Matrices, InstanceCount);
+            Array.Copy(TextureIndexArray, MatriceStructData.TextureIDs, InstanceCount);
 
 
-            UpdateLightDataUBO();
+            Gl.BindBuffer(BufferTarget.ShaderStorageBuffer, MatriceUBO);
 
-            Gl.BindBuffer(BufferTarget.UniformBuffer, 0);
+
+            int uboSize = Marshal.SizeOf(MatriceStructData);
+            IntPtr ptr = Marshal.AllocHGlobal(uboSize);
+            Marshal.StructureToPtr(MatriceStructData, ptr, false);
+            Gl.BufferData(BufferTarget.ShaderStorageBuffer, (IntPtr)uboSize, ptr, BufferUsageHint.DynamicDraw);
+
+            Marshal.FreeHGlobal(ptr);
+            Gl.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
+
+        }
+
+        private static byte[] Load2DTexture(string path)
+        {
+            byte[] imageData = File.ReadAllBytes(path);
+            return imageData;
+        }
+
+        private static List<byte[]> EnumerateTexturePaths(string[] texturepaths)
+        {
+            List<byte[]> TextureList = new List<byte[]>();
+
+            for(int i = 0; i < texturepaths.Length; i++)
+            {
+                byte[] data = Load2DTexture(texturepaths[i]);
+                TextureList.Add(data);
+            }
+
+            return TextureList;
+        }
+
+
+        private static void InitializeBufferObject<T>(BufferTarget buffertarget, uint uboptr, uint layoutIndex)
+        {
+
+
+            Gl.BindBuffer(buffertarget, uboptr);
+
+            int uboSize = Marshal.SizeOf(typeof(T));
+            Gl.BufferData(buffertarget, (IntPtr)uboSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            Gl.BindBufferBase(buffertarget, layoutIndex, uboptr);
+
+
+
+            Gl.BindBuffer(buffertarget, 0);
 
         }
 
@@ -182,7 +251,7 @@ namespace BlockGameRenderer
                 }
 
             };
-
+            // doing it the old fashioned way
             skyboxVAO = Gl.GenVertexArray();
             skyboxVBO = Gl.GenBuffer();
             skyboxEBO = Gl.GenBuffer();
@@ -252,6 +321,7 @@ namespace BlockGameRenderer
             Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureParameter.ClampToEdge);
             Gl.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureParameter.ClampToEdge);
             Gl.BindTexture(TextureTarget.TextureCubeMap, 0);
+            Gl.ActiveTexture(0);
 
         }
 
@@ -271,7 +341,7 @@ namespace BlockGameRenderer
             Map = new World(new Vector3(-(Worldsize / 2), -(Worldsize / 2), -(Worldsize / 2)), new Vector3((Worldsize / 2), (Worldsize / 2), (Worldsize / 2)));
             GameTime = new Time();  // generic thread for generic game jobs
 
-            ExampleSquare = new OakLog(ExamplePosition, new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
+            ExampleSquare = new OakLeaves(ExamplePosition, new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
             ExampleSquare2 = new Grass(new Vector3(-8f, 0, 0), new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
 
             
@@ -312,7 +382,7 @@ namespace BlockGameRenderer
 
 
             Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
-            Gl.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            Gl.ClearColor(1f, 1f, 1f, 1.0f);
             Glut.glutReshapeFunc(OnReshape);
             inputManager.OnKeyboardEvent += Input.OnKeyboardDown;
             Glut.glutPassiveMotionFunc(camera.Interpolate2D);
@@ -323,12 +393,24 @@ namespace BlockGameRenderer
             Lights = new List<Vector4>(100) { };
             Colors = new List<Vector4>(100) { };
             Brightness = new List<Vector4>(100) { };
+            ObjectMatrices = new List<Matrix4>(100000) { };
+            ActiveBlockTextures = new List<Vector4>(100000) { };
             shaderProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedFragmentShader));
             skyboxShader = new ShaderProgram(LoadShader(SkyboxVertexShader), LoadShader(SkyboxFragmentShader));
-            InitializeUBO(shaderProgram.ProgramID, "lightdata");
+            ubo = Gl.GenBuffer();
+            MatriceUBO = Gl.GenBuffer();
+            Vao = Gl.GenVertexArray();
+            BlockTextureIndex = CreateTextureArray(160, 16, EnumerateTexturePaths(BlockTexturePaths));
+          
+            InitializeBufferObject<LightData>(BufferTarget.UniformBuffer, ubo, 11);
+            InitializeBufferObject<MatricesBlock>(BufferTarget.ShaderStorageBuffer, MatriceUBO, 4);
+            UpdateLightDataUBO();
+            UpdateMatrixDataUBO();
             shaderProgram.Use(); 
             shaderProgram["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(fov, (float)width / height, MinRenderDistance, MaxRenderDistance));
             
+            
+
             skyboxShader.Use();
             Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 3);
             InitSkybox();
@@ -372,9 +454,7 @@ namespace BlockGameRenderer
         }
 
      
-
-       
-        private static void onClose()
+        public static void DeloadMap()
         {
             VisibleEntities = Map.Entities.Retrieve(new BoundingBox
             {
@@ -384,17 +464,60 @@ namespace BlockGameRenderer
 
             foreach (var Ent in VisibleEntities)
             {
-
-                Ent.Block.texture.Dispose();
                 Ent.Block.textureUVs.Dispose();
-                foreach(var toClose in Ent.Block.Geometry.ConstitutentGeometry)
+                foreach (var toClose in Ent.Block.Geometry.ConstitutentGeometry)
                 {
                     Deload(toClose);
                 }
             }
+
+        }
+        private static uint CreateTextureArray(int textureWidth, int textureHeight, List<byte[]> textureDataList)
+        {
+            uint textureArray;
+            textureArray = Gl.GenTexture();
+            Gl.BindTexture(TextureTarget.Texture2DArray, textureArray);
+            Gl.TexStorage3D(TextureTarget.Texture2DArray, 1, SizedInternalFormat.Rgba8, textureWidth, textureHeight, textureDataList.Count);
+
+            for (int i = 0; i < textureDataList.Count; i++)
+            {
+
+                byte[] textureData = textureDataList[i];
+                ImageResult data = ImageResult.FromMemory(textureData, ColorComponents.RedGreenBlueAlpha);
+
+                unsafe
+                {
+                    fixed (byte* dataPtr = data.Data)
+                    {
+                        IntPtr intPtr = new IntPtr(dataPtr);
+                        Gl.TexSubImage3D(TextureTarget.Texture2DArray, 0, 0, 0, i, data.Width, data.Height, 1, OpenGL.PixelFormat.Rgba, PixelType.UnsignedByte, intPtr);
+                    }
+                }
+            }
+
+            // Set texture parameters
+            Gl.TexParameteri(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter, TextureParameter.Nearest);
+            Gl.TexParameteri(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, TextureParameter.Nearest);
+            Gl.TexParameteri(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, TextureParameter.Repeat);
+            Gl.TexParameteri(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, TextureParameter.Repeat);
+
+            // Unbind the texture array
+            Gl.BindTexture(TextureTarget.Texture2DArray, 0);
+
+            // Return the texture array ID
+            return textureArray;
+        }
+
+
+
+        private static void onClose()
+        {
+            DeloadMap();
             shaderProgram.DisposeChildren = true;
             shaderProgram.Dispose();
             inputManager.Dispose();
+            skyboxShader.DisposeChildren = true;
+            skyboxShader.Dispose();
         }
 
         private static void onDisplay()
@@ -404,29 +527,37 @@ namespace BlockGameRenderer
 
         private static void onRenderFrame()
         {
+
+            InstanceCount = 0;
+            int VertCount = 0;
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             shaderProgram.Use();
             UpdateLightDataUBO();
-            Lights.Clear();
-            Colors.Clear();
-            Brightness.Clear();
-
-
-
-            uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
-            Gl.EnableVertexAttribArray(vertexPositionIndex);
-            shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
-
-
             
 
 
 
+            //uint vertexPositionIndex = (uint)Gl.GetAttribLocation(shaderProgram.ProgramID, "vertexPosition");
+            //Gl.EnableVertexAttribArray(vertexPositionIndex);
+            shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
+
+            Gl.ActiveTexture(10);
+
+            Gl.BindTexture(TextureTarget.Texture2DArray, BlockTextureIndex);
+
+            Gl.Uniform1i(Gl.GetUniformLocation(shaderProgram.ProgramID, "textureArray"), 10);
+
+
+
+
+
+
+
+            Gl.BindVertexArray(Vao);
 
             foreach (var Ent in updateService.ReturnUpdateList())
             {
-
-                Gl.BindTexture(Ent.Block.texture);
+                //Gl.BindTexture(Ent.Block.texture);
                 if (Ent.Block.Light > 0)
                 {
                     Lights.Add(new Vector4(Ent.Position.X, Ent.Position.Y, Ent.Position.Z, 0));
@@ -436,9 +567,15 @@ namespace BlockGameRenderer
                 
                 foreach (var GeometryElements in Ent.Block.Geometry.ConstitutentGeometry)
                 {
-                    Gl.BindBufferToShaderAttribute(GeometryElements.Normals, shaderProgram, "vertexNormals");
-                    Gl.BindBufferToShaderAttribute(GeometryElements.Vertices, shaderProgram, "vertexPosition");
-                    Gl.BindBufferToShaderAttribute(Ent.Block.textureUVs, shaderProgram, "vertexUV");
+                    InstanceCount +=1;
+
+                    VertCount += GeometryElements.Vertices.Count;
+                  Gl.BindBufferToShaderAttribute(GeometryElements.Normals, shaderProgram, "vertexNormals");
+                  Gl.BindBufferToShaderAttribute(GeometryElements.Vertices, shaderProgram, "vertexPosition"); // REALLY inefficient, update to use a single draw call
+                  Gl.BindBufferToShaderAttribute(Ent.Block.textureUVs, shaderProgram, "vertexUV");
+
+                    
+
 
                     int location = Gl.GetUniformLocation(shaderProgram.ProgramID, "opacity");
                     Gl.Uniform1f(location, Ent.Block.Transparency);
@@ -448,21 +585,38 @@ namespace BlockGameRenderer
 
                     Matrix4 model = Matrix4.Identity;
 
+                    model = model * Matrix4.CreateTranslation(GeometryElements.Position);
+
                     model = model* Matrix4.CreateTranslation(-GeometryElements.Position);
 
                     model = model * GeometryElements.Rotation;
+
                     model = model * Matrix4.CreateTranslation(GeometryElements.Position);
 
-                    shaderProgram["model_matrix"].SetValue(model);
+
+                    ObjectMatrices.Add(model);
+
+                    ActiveBlockTextures.Add(new Vector4(Ent.Block.textureID, 0 , 0 , 0));
+
+                    //shaderProgram["model_matrix"].SetValue(model);
+
+                   
 
 
-                    Gl.DrawElements(GeometryElements.Beginmode, GeometryElements.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                   // Gl.DrawElements(GeometryElements.Beginmode, GeometryElements.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
                     
                 }
+
             }
 
-            
+            //Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            UpdateMatrixDataUBO();
+            Gl.DrawElementsInstanced(BeginMode.Triangles,VertCount, DrawElementsType.UnsignedInt, IntPtr.Zero, InstanceCount);           
+            Gl.BindVertexArray(0);
 
+
+
+            Gl.DepthMask(false);
             skyboxShader.Use();
             // redefining some of the matrices so we can render a skybox without issues
             // quick and dirty
@@ -476,7 +630,7 @@ namespace BlockGameRenderer
 
 
             Gl.BindVertexArray(skyboxVAO);
-            Gl.ActiveTexture(TextureUnit.Texture3);
+            Gl.ActiveTexture(3);
 
 
             Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
@@ -492,6 +646,12 @@ namespace BlockGameRenderer
             Gl.ActiveTexture(0);
             Gl.BindTexture(TextureTarget.TextureCubeMap, 0);
 
+            Gl.DepthMask(true);
+            Lights.Clear();
+            Colors.Clear();
+            Brightness.Clear();
+            ObjectMatrices.Clear();
+            ActiveBlockTextures.Clear();
 
             Glut.glutSwapBuffers();
 

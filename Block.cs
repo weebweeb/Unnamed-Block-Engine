@@ -14,7 +14,7 @@ namespace Blocks
     public class Block
     {
         public int Hardness { get; set; }
-        public Texture texture { get; set; }
+        public int textureID { get; set; }
 
         public Shape Geometry { get; set; }
 
@@ -39,13 +39,13 @@ namespace Blocks
                 new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
                 new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
                 new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
-                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) }, BufferTarget.ArrayBuffer);
 
         public Grass(Vector3 position, Vector3 size, Matrix4 Angle)
         {
             Hardness = 1;
 
-            texture = new Texture("grass.png");
+            textureID = 0;
 
             Light = 1f;
 
@@ -73,7 +73,7 @@ namespace Blocks
                 new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
 
 
-            });
+            }, BufferTarget.ArrayBuffer);
 
             Geometry = new Cube(position, size, ExampleColor3D, Angle);
 
@@ -89,13 +89,13 @@ namespace Blocks
                 new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
                 new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
                 new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
-                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) }, BufferTarget.ArrayBuffer);
 
         public Dirt(Vector3 position, Vector3 size, Matrix4 Angle)
         {
             Hardness = 1;
 
-            texture = new Texture("dirt.png");
+            textureID = 3;
 
             ID = 0;
 
@@ -119,7 +119,7 @@ namespace Blocks
                 new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
 
 
-            });
+            }, BufferTarget.ArrayBuffer);
 
             Geometry = new Cube(position, size, ExampleColor3D, Angle);
 
@@ -135,13 +135,13 @@ namespace Blocks
                 new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
                 new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
                 new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
-                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) }, BufferTarget.ArrayBuffer);
 
         public Stone(Vector3 position, Vector3 size, Matrix4 Angle)
         {
             Hardness = 5;
 
-            texture = new Texture("stone.png");
+            textureID = 1;
 
             ID = 0;
 
@@ -165,7 +165,7 @@ namespace Blocks
                 new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
 
 
-            });
+            }, BufferTarget.ArrayBuffer);
 
             Geometry = new Cube(position, size, ExampleColor3D, Angle);
 
@@ -182,13 +182,13 @@ namespace Blocks
                 new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
                 new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
                 new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
-                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) }, BufferTarget.ArrayBuffer);
 
         public OakLog(Vector3 position, Vector3 size, Matrix4 Angle)
         {
             Hardness = 3;
 
-            texture = new Texture("oaklog.png");
+            textureID = 5;
 
             ID = 0;
 
@@ -212,7 +212,7 @@ namespace Blocks
                 new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
 
 
-            });
+            }, BufferTarget.ArrayBuffer);
 
             Geometry = new Cube(position, size, ExampleColor3D, Angle);
 
@@ -229,17 +229,72 @@ namespace Blocks
                 new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
                 new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
                 new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
-                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) }, BufferTarget.ArrayBuffer);
 
         public OakLeaves(Vector3 position, Vector3 size, Matrix4 Angle)
         {
             Hardness = 1;
 
-            texture = new Texture("oakleaves.png");
+            textureID = 4;
 
             ID = 0;
 
             Transparency = 1f;
+
+            textureUVs = new VBO<Vector2>(new Vector2[] {
+                // Side face //
+                new Vector2(2f / 10f, 1f), new Vector2(3f / 10f, 1f), new Vector2(3f / 10f, 0f), new Vector2(2f / 10f, 0f),
+
+                // Back face //
+                new Vector2(4f / 10f, 1f), new Vector2(4f / 10f, 0f), new Vector2(3f / 10f, 0f), new Vector2(3f / 10f, 1f),
+
+                // Side face 
+                new Vector2(5f / 10f, 1f), new Vector2(5f / 10f, 0f), new Vector2(4f / 10f, 0f), new Vector2(4f / 10f, 1f),
+
+                // Front face //
+                new Vector2(0f / 10f, 1f), new Vector2(1f / 10f, 1f), new Vector2(1f / 10f, 0f), new Vector2(0f / 10f, 0f),
+
+                // Bottom face
+               new Vector2(6f / 10f, 0f), new Vector2(5f / 10f, 0f), new Vector2(5f / 10f, 1f), new Vector2(6f / 10f, 1f), 
+
+                // Top face
+                new Vector2(1f / 10f, 1f), new Vector2(2f / 10f, 1f), new Vector2(2f / 10f, 0f), new Vector2(1f / 10f, 0f),
+
+
+            }, BufferTarget.ArrayBuffer);
+
+            Geometry = new Cube(position, size, ExampleColor3D, Angle);
+
+        }
+    }
+
+
+
+
+    public class Water : Block
+    {
+
+        VBO<Vector3> ExampleColor3D = new VBO<Vector3>(new Vector3[]
+             {  new Vector3(0, 1, 0), new Vector3(0, 1, 0), new Vector3(0, 1, 0), new Vector3(0, 1, 0),
+                new Vector3(1, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 0, 0),
+                new Vector3(1, 0, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 0.5f, 0), new Vector3(1, 1, 0),
+                new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 0),
+                new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1), new Vector3(0, 0, 1),
+                new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(1, 0, 1) });
+
+        public Water(Vector3 position, Vector3 size, Matrix4 Angle)
+        {
+            Hardness = 1;
+
+            textureID = 2;
+
+            Light = 0f;
+
+            Transparency = 0.6f;
+
+            LightColor = new Vector3(0, 1f, 0);
+
+            ID = 0;
 
             textureUVs = new VBO<Vector2>(new Vector2[] {
                 // Side face //
