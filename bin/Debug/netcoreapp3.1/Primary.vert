@@ -17,7 +17,7 @@ layout(std140, binding = 4) buffer MatriceStructData {
 
 void main(void)
 {
-    uv = vec3(vertexUV,TextureIDs[gl_InstanceID].x);
+    uv = vec3(vertexUV.x,vertexUV.y,TextureIDs[gl_InstanceID].x);
     normals = normalize((model_matrix[gl_InstanceID] * vec4(vertexNormals,0)).xyz);
     
     gl_Position = projection_matrix * view_matrix * model_matrix[gl_InstanceID] * vec4(vertexPosition, 1);

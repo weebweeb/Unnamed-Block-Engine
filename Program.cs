@@ -2,7 +2,6 @@
 using Tao.FreeGlut;
 using OpenGL;
 using System.Numerics;
-using System.Drawing;
 using Shapes;
 using WorldManager;
 using System.Collections.Generic;
@@ -10,13 +9,9 @@ using Tick;
 using Animations;
 using Blocks;
 using LowLevelInput.Hooks;
-using LowLevelInput.Converters;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Drawing.Imaging;
 using System.Text;
-using System.Threading;
-using Skybox;
 using StbImageSharp;
 
 namespace BlockGameRenderer
@@ -31,6 +26,8 @@ namespace BlockGameRenderer
         public static float fov = 0.7f;
         public static string SelectedVertexShader = "Primary.vert";
         public static string SelectedFragmentShader = "Primary.frag";
+        public static string SelectedCompositeShader = "Composite.frag";
+        public static string SelectedAccumilationShader = "Accum.frag";
         public static string SkyboxVertexShader = "Skybox.vert";
         public static string SkyboxFragmentShader = "Skybox.frag";
 
@@ -40,6 +37,7 @@ namespace BlockGameRenderer
         public static int Worldsize = 2000;
         public static bool Fullscreen = false;
         public static Vector3 ambient_light = new Vector3(0.5f,0.5f,0.5f);
+        
 
         public static Camera camera;
         public static List<Vector4> Lights;
@@ -64,9 +62,15 @@ namespace BlockGameRenderer
 
         private static ShaderProgram shaderProgram;
         private static ShaderProgram skyboxShader;
+        private static ShaderProgram compositeProgram;
+        private static ShaderProgram accumilationProgram;
+        private static ShaderProgram screenShaderProgram;
         private static World Map;
         private static Block ExampleSquare;
         private static Block ExampleSquare2;
+        public static VBO<Vector3> screenColor;
+        public static Matrix4 tmodel;
+        public static Triangle fullscreenTriangle;
         private static Vector3 ExamplePosition;
         private static Time GameTime;
         private static InputManager inputManager;
@@ -77,6 +81,9 @@ namespace BlockGameRenderer
         public static List<GameEntity> VisibleEntities;
         public static uint skyboxVAO, skyboxVBO, skyboxEBO;
         public static int InstanceCount = 0;
+        public static uint accumColorTex;
+        public static uint accumWeightTex;
+        public static uint framebuffer;
 
 
         public static String LoadShader(string path)
@@ -251,6 +258,9 @@ namespace BlockGameRenderer
                 }
 
             };
+
+            Gl.ActiveTexture(3);
+
             // doing it the old fashioned way
             skyboxVAO = Gl.GenVertexArray();
             skyboxVBO = Gl.GenBuffer();
@@ -268,7 +278,6 @@ namespace BlockGameRenderer
 
 
 
-            Gl.ActiveTexture(3);
 
             CubeMapTexture = Gl.GenTexture();
 
@@ -343,8 +352,10 @@ namespace BlockGameRenderer
 
             ExampleSquare = new OakLeaves(ExamplePosition, new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
             ExampleSquare2 = new Grass(new Vector3(-8f, 0, 0), new Vector3(1, 1, 1), Shape.CreateRotationMatrix(Vector3.UnitY, 0.1f));
+            screenColor = new VBO<Vector3>(new Vector3[] { new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1) });
+            tmodel = Matrix4.Identity;
+            fullscreenTriangle = new Triangle(new Vector3(0, 0, 0), new Vector3(0, 0, 0), screenColor, tmodel);
 
-            
             AnimationObject = new Animation
             {
                 AnimationFunctions = new GenericAnimationFunction[] { new GenericAnimationFunction(ExampleAnimationFunction) },
@@ -364,7 +375,14 @@ namespace BlockGameRenderer
             updateService = new UpdateService(Map, RoundedRenderDistance, 5000, new Vector3(0, 0, 0));
             GameTime.addRunTimeFunction(new GenericFunction(UpdateCamera));
 
+            uint accumColorTex = Gl.GenTexture(); // Accumulated color buffer
+            uint accumWeightTex = Gl.GenTexture(); // Accumulated weight buffer
+            uint framebuffer = Gl.GenFramebuffer();
 
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
+            Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, accumColorTex, 0);
+            Gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2D, accumWeightTex, 0);
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
             Gl.DepthFunc(DepthFunction.Less);
             Gl.Enable(EnableCap.DepthTest);
@@ -375,14 +393,15 @@ namespace BlockGameRenderer
             Gl.Enable(EnableCap.TextureCubeMap);
             Gl.FrontFace(FrontFaceDirection.Ccw);
             Gl.Enable(EnableCap.TextureCubeMapSeamless);
+            Gl.BlendFuncSeparate(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.One, BlendingFactorSrc.OneMinusSrcAlpha, BlendingFactorDest.One);
 
             Gl.Viewport(0, 0, width, height);
 
 
 
 
-            Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
-            Gl.ClearColor(1f, 1f, 1f, 1.0f);
+           // Gl.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
+            Gl.ClearColor(0f, 0f, 0f, 0f);
             Glut.glutReshapeFunc(OnReshape);
             inputManager.OnKeyboardEvent += Input.OnKeyboardDown;
             Glut.glutPassiveMotionFunc(camera.Interpolate2D);
@@ -397,6 +416,10 @@ namespace BlockGameRenderer
             ActiveBlockTextures = new List<Vector4>(100000) { };
             shaderProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedFragmentShader));
             skyboxShader = new ShaderProgram(LoadShader(SkyboxVertexShader), LoadShader(SkyboxFragmentShader));
+            compositeProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedCompositeShader));
+            accumilationProgram = new ShaderProgram(LoadShader(SelectedVertexShader), LoadShader(SelectedAccumilationShader));
+            screenShaderProgram = new ShaderProgram(LoadShader("ScreenShader.vert"), LoadShader("ScreenShader.frag"));
+            
             ubo = Gl.GenBuffer();
             MatriceUBO = Gl.GenBuffer();
             Vao = Gl.GenVertexArray();
@@ -414,9 +437,11 @@ namespace BlockGameRenderer
             skyboxShader.Use();
             Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 3);
             InitSkybox();
+            skyboxShader["view_matrix"].SetValue(camera.SimplifiedViewMatrix);
+            skyboxShader["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(0.45f, (float)width / height, 0.1f, 10000f));
 
             inputManager.Initialize();
-            Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future
+            Glut.glutMainLoop(); // Rendering using x86 version of Glut, might become a bottleneck in the future(?)
         }
 
 
@@ -503,6 +528,7 @@ namespace BlockGameRenderer
 
             // Unbind the texture array
             Gl.BindTexture(TextureTarget.Texture2DArray, 0);
+            Gl.ActiveTexture(0);
 
             // Return the texture array ID
             return textureArray;
@@ -530,9 +556,11 @@ namespace BlockGameRenderer
 
             InstanceCount = 0;
             int VertCount = 0;
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
+
             Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            Gl.Disable(EnableCap.Blend);
             shaderProgram.Use();
-            UpdateLightDataUBO();
             
 
 
@@ -541,11 +569,11 @@ namespace BlockGameRenderer
             //Gl.EnableVertexAttribArray(vertexPositionIndex);
             shaderProgram["view_matrix"].SetValue(camera.ViewMatrix);
 
-            Gl.ActiveTexture(10);
+            Gl.ActiveTexture(5);
 
             Gl.BindTexture(TextureTarget.Texture2DArray, BlockTextureIndex);
 
-            Gl.Uniform1i(Gl.GetUniformLocation(shaderProgram.ProgramID, "textureArray"), 10);
+            Gl.Uniform1i(Gl.GetUniformLocation(shaderProgram.ProgramID, "textureArray"), 5);
 
 
 
@@ -554,87 +582,147 @@ namespace BlockGameRenderer
 
 
             Gl.BindVertexArray(Vao);
+            
 
-            foreach (var Ent in updateService.ReturnUpdateList())
+
+            void Render(GameEntity[] UpdateList)
             {
-                //Gl.BindTexture(Ent.Block.texture);
-                if (Ent.Block.Light > 0)
+                VertCount = 0;
+                InstanceCount = 0;
+                foreach (var Ent in UpdateList)
                 {
-                    Lights.Add(new Vector4(Ent.Position.X, Ent.Position.Y, Ent.Position.Z, 0));
-                    Colors.Add(new Vector4(Ent.Block.LightColor.X, Ent.Block.LightColor.Y, Ent.Block.LightColor.Z, 0));
-                    Brightness.Add(new Vector4(Ent.Block.Light, 0 ,0, 0));
-                }
-                
-                foreach (var GeometryElements in Ent.Block.Geometry.ConstitutentGeometry)
-                {
-                    InstanceCount +=1;
-
-                    VertCount += GeometryElements.Vertices.Count;
-                  Gl.BindBufferToShaderAttribute(GeometryElements.Normals, shaderProgram, "vertexNormals");
-                  Gl.BindBufferToShaderAttribute(GeometryElements.Vertices, shaderProgram, "vertexPosition"); // REALLY inefficient, update to use a single draw call
-                  Gl.BindBufferToShaderAttribute(Ent.Block.textureUVs, shaderProgram, "vertexUV");
-
-                    
-
-
-                    int location = Gl.GetUniformLocation(shaderProgram.ProgramID, "opacity");
-                    Gl.Uniform1f(location, Ent.Block.Transparency);
-                    
-
-                    Gl.BindBuffer(GeometryElements.Elements);
-
-                    Matrix4 model = Matrix4.Identity;
-
-                    model = model * Matrix4.CreateTranslation(GeometryElements.Position);
-
-                    model = model* Matrix4.CreateTranslation(-GeometryElements.Position);
-
-                    model = model * GeometryElements.Rotation;
-
-                    model = model * Matrix4.CreateTranslation(GeometryElements.Position);
-
-
-                    ObjectMatrices.Add(model);
-
-                    ActiveBlockTextures.Add(new Vector4(Ent.Block.textureID, 0 , 0 , 0));
-
-                    //shaderProgram["model_matrix"].SetValue(model);
-
                    
+                    if (Ent.Block.Light > 0)
+                    {
+                        Lights.Add(new Vector4(Ent.Position.X, Ent.Position.Y, Ent.Position.Z, 0));
+                        Colors.Add(new Vector4(Ent.Block.LightColor.X, Ent.Block.LightColor.Y, Ent.Block.LightColor.Z, 0));
+                        Brightness.Add(new Vector4(Ent.Block.Light, 0, 0, 0));
+                    }
+
+                    foreach (var GeometryElements in Ent.Block.Geometry.ConstitutentGeometry)
+                    {
+                        InstanceCount += 1;
+
+                        VertCount += GeometryElements.Vertices.Count;
+                        Gl.BindBufferToShaderAttribute(GeometryElements.Normals, shaderProgram, "vertexNormals");
+                        Gl.BindBufferToShaderAttribute(GeometryElements.Vertices, shaderProgram, "vertexPosition");
+                        Gl.BindBufferToShaderAttribute(Ent.Block.textureUVs, shaderProgram, "vertexUV");
 
 
-                   // Gl.DrawElements(GeometryElements.Beginmode, GeometryElements.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
-                    
+
+
+                        int location = Gl.GetUniformLocation(shaderProgram.ProgramID, "opacity");
+                        Gl.Uniform1f(location, Ent.Block.Transparency);
+
+
+                        Gl.BindBuffer(GeometryElements.Elements);
+
+                        Matrix4 model = Matrix4.Identity;
+
+                        model = model * Matrix4.CreateTranslation(GeometryElements.Position);
+
+                        model = model * Matrix4.CreateTranslation(-GeometryElements.Position);
+
+                        model = model * GeometryElements.Rotation;
+
+                        model = model * Matrix4.CreateTranslation(GeometryElements.Position);
+
+
+                        ObjectMatrices.Add(model);
+
+                        ActiveBlockTextures.Add(new Vector4(Ent.Block.textureID, 0, 0, 0));
+
+                        //shaderProgram["model_matrix"].SetValue(model);
+
+
+
+
+                        // Gl.DrawElements(GeometryElements.Beginmode, GeometryElements.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero);
+
+                    }
+
                 }
-
             }
 
-            //Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            GameEntity[] SolidEntities = updateService.ReturnSolidEntities();
+
+            Render(SolidEntities); // render solid entities first 
+            // TODO: setup rendering pipeline for transparent objects, and finish Order Independent Transparency implementation.
+            UpdateLightDataUBO();
             UpdateMatrixDataUBO();
             Gl.DrawElementsInstanced(BeginMode.Triangles,VertCount, DrawElementsType.UnsignedInt, IntPtr.Zero, InstanceCount);           
             Gl.BindVertexArray(0);
+            Gl.Enable(EnableCap.Blend);
+            Gl.BlendFunci(0, BlendingFactorSrc.One, BlendingFactorDest.One); // accumulation blend target
+            Gl.BlendFunci(1, BlendingFactorSrc.Zero, BlendingFactorDest.OneMinusSrcColor); // revealge blend target
+            Gl.BlendEquation(BlendEquationMode.FuncAdd);
+
+            accumilationProgram.Use();
+            GameEntity[] TransparentEntities = updateService.ReturnTransparentEntities();
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);  // Render to default framebuffer
+            Gl.Disable(EnableCap.Blend);  // Disable blending for composite pass
+            Gl.DepthMask(true);  // Re-enable depth writes
+            Render(TransparentEntities);
+            Gl.DrawElementsInstanced(BeginMode.Triangles, VertCount, DrawElementsType.UnsignedInt, IntPtr.Zero, InstanceCount);
+
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);  // Render to default framebuffer
+            Gl.Disable(EnableCap.Blend);  // Disable blending for composite pass
+            Gl.DepthMask(true);  // Re-enable depth writes
+
+            compositeProgram.Use();
+
+            Gl.Disable(EnableCap.DepthTest);
+            Gl.DepthMask(true); // enable depth writes so glClear won't ignore clearing the depth buffer
+            Gl.Disable(EnableCap.Blend);
+            Gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            Gl.ClearColor(0, 0, 0, 0);
+            Gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
+            Gl.ActiveTexture(0);
+            Gl.BindTexture(TextureTarget.Texture2D, accumColorTex);
+
+            Gl.Uniform1i(Gl.GetUniformLocation(compositeProgram.ProgramID, "accumColorTex"), 0);
+
+            Gl.ActiveTexture(1);
+            Gl.BindTexture(TextureTarget.Texture2D, accumWeightTex);
+
+            Gl.Uniform1i(Gl.GetUniformLocation(compositeProgram.ProgramID, "accumWeightTex"), 1);
+
+
+            screenShaderProgram.Use();
+
+
+            
+            Gl.BindBuffer(fullscreenTriangle.Elements);
+            Gl.DrawElementsInstanced(BeginMode.Triangles, fullscreenTriangle.Elements.Count, DrawElementsType.UnsignedInt, IntPtr.Zero, 1);
 
 
 
+
+            Gl.Enable(EnableCap.DepthTest);
+            Gl.Enable(EnableCap.Blend);
             Gl.DepthMask(false);
             skyboxShader.Use();
-            // redefining some of the matrices so we can render a skybox without issues
-            // quick and dirty
+
             Gl.DepthFunc(DepthFunction.Lequal);
             Gl.CullFace(CullFaceMode.Back);
 
+
+            Gl.ActiveTexture(3);
+
             Gl.BindTexture(TextureTarget.TextureCubeMap, CubeMapTexture);
+
+            Gl.Uniform1i(Gl.GetUniformLocation(skyboxShader.ProgramID, "skybox"), 3);
+
+            Gl.BindVertexArray(skyboxVAO);
+
 
             skyboxShader["view_matrix"].SetValue(camera.SimplifiedViewMatrix);
             skyboxShader["projection_matrix"].SetValue(Matrix4.CreatePerspectiveFieldOfView(0.45f, (float)width / height, 0.1f, 10000f));
 
 
-            Gl.BindVertexArray(skyboxVAO);
-            Gl.ActiveTexture(3);
 
 
             Gl.DrawElements(BeginMode.Triangles, 36, DrawElementsType.UnsignedInt, IntPtr.Zero);
-            Gl.BindVertexArray(0);
 
 
             //Gl.BindBufferToShaderAttribute(LocalSkybox.Vertices, skyboxShader, "aPos");

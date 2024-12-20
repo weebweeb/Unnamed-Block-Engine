@@ -14,7 +14,8 @@ layout(std140, binding = 11) uniform LightData
     vec3 ambient;
 };
 
-out vec4 fragment;
+out vec4 accumcolor;
+out float accumweight;
 
 
 vec4 tex = texture(textureArray, uv);
@@ -32,7 +33,17 @@ void main(void)
     }
     
 
+
     vec3 finalColor = tex.rgb * diffusecolor;
 
-    fragment = vec4(finalColor * tex.a, opacity*tex.a);
+    
+
+    float weight =
+    max(min(1.0, max(max(accumcolor.r, accumcolor.g), accumcolor.b) * accumcolor.a), accumcolor.a) *
+    clamp(0.03 / (1e-5 + pow(gl_FragCoord.z / 200, 4.0)), 1e-2, 3e3);
+
+    accumcolor = vec4(finalColor * tex.a, opacity*tex.a) * weight;
+
+    accumweight = tex.a;
+
     };

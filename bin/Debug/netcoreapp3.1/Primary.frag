@@ -34,5 +34,5 @@ void main(void)
 
     vec3 finalColor = tex.rgb * diffusecolor;
 
-    fragment = vec4(finalColor, opacity*tex.a);
+    fragment = vec4(finalColor * tex.a, opacity*tex.a);
     };

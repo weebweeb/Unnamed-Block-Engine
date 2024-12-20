@@ -39,7 +39,7 @@ void main()
     // Output the blended color
     FragColor = blendColor;
 
-  //FragColor = texture(skybox, texCoords);
+  //FragColor = vec4(texCoords, 1);
 
 
 

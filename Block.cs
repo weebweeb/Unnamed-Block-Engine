@@ -27,6 +27,8 @@ namespace Blocks
         public int ID { get; set; }
 
         public float Transparency = 1;
+
+        public bool ContainsTransparencies = false; // a flag for the rendering engine for whether an object should be considered "somewhat" opaque, or contains opaque elements
     }
 
 
@@ -241,6 +243,8 @@ namespace Blocks
 
             Transparency = 1f;
 
+            ContainsTransparencies = true;
+
             textureUVs = new VBO<Vector2>(new Vector2[] {
                 // Side face //
                 new Vector2(2f / 10f, 1f), new Vector2(3f / 10f, 1f), new Vector2(3f / 10f, 0f), new Vector2(2f / 10f, 0f),
@@ -291,6 +295,8 @@ namespace Blocks
             Light = 0f;
 
             Transparency = 0.6f;
+
+            ContainsTransparencies = true;
 
             LightColor = new Vector3(0, 1f, 0);
 

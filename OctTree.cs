@@ -16,6 +16,7 @@ public class GameEntity //Abstract a instance into a generic object
     public BoundingBox Bounds { get; set; } // Assume BoundingBox is a class defining the entity's bounds.
     public Block Block { get; set; }
 
+
 }
 
 // Represents a bounding box with minimum and maximum corners.

@@ -52,13 +52,37 @@ namespace BlockGameRenderer
             
             return VisibleEntities.ToArray(); ;
         }
+
+        public GameEntity[] ReturnSolidEntities()
+        {
+            List<GameEntity> UpdateList = VisibleEntities;
+            List<GameEntity> SortedList = new List<GameEntity>();
+            foreach (var ent in UpdateList)
+                if (ent.Block.ContainsTransparencies == false && ent.Block.Transparency == 1)
+                {
+                    SortedList.Add(ent);
+                }
+            return SortedList.ToArray();
+            }
+
+
+        public GameEntity[] ReturnTransparentEntities()
+        {
+            List<GameEntity> UpdateList = VisibleEntities;
+            List<GameEntity> SortedList = new List<GameEntity>();
+            foreach (var ent in UpdateList)
+                if (ent.Block.ContainsTransparencies == true || ent.Block.Transparency < 1)
+                {
+                    SortedList.Add(ent);
+                }
+            return SortedList.ToArray();
+        }
+    }
+
        
 
         
 
         
     }
-
-        
- }
 
